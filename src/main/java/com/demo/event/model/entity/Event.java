@@ -46,6 +46,10 @@ public class Event {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "is_active",
+            columnDefinition = "TINYINT(1) DEFAULT 0")
+    private Boolean isActive = false;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<EventReminder> reminders;
 }

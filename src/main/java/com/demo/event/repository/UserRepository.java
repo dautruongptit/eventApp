@@ -22,4 +22,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("UPDATE User u SET u.totalEvents = u.totalEvents - 1 WHERE u.id = :id AND u.totalEvents > 0")
     void decrementEventCount(@Param("id") Long userId);
+
+    @Modifying
+    @Query("UPDATE User u SET u.totalRelatives = u.totalRelatives - 1 WHERE u.id = :id AND u.totalRelatives > 0")
+    void decrementRelativeCount(@Param("id") Long userId);
+
 }

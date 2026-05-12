@@ -1,4 +1,4 @@
-package com.demo.event.model.dto.request;
+package com.demo.event.model.dto.response;
 
 import lombok.*;
 import java.time.LocalDateTime;

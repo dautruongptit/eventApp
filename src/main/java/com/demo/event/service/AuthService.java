@@ -1,11 +1,13 @@
 package com.demo.event.service;
 
+import com.demo.event.exception.BadRequestException;
+import com.demo.event.model.dto.request.LoginRequest;
 import com.demo.event.model.dto.request.RegisterRequest;
+import com.demo.event.model.dto.response.AuthResponse;
 import com.demo.event.model.entity.User;
 import com.demo.event.repository.UserRepository;
 import com.demo.event.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +23,7 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest req) {
         if (userRepo.existsByEmail(req.getEmail()))
-            throw new BadRequestException("Email đã được sử dụng");
+            throw new com.demo.event.exception.BadRequestException("Email đã được sử dụng");
 
         User user = User.builder()
                 .fullName(req.getFullName())

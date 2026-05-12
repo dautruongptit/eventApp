@@ -35,4 +35,10 @@ public interface RelativeRepository extends JpaRepository<Relative, Long> {
     @Modifying
     @Query("UPDATE Relative r SET r.totalEvents = r.totalEvents + 1 WHERE r.id = :id")
     void incrementEventCount(@Param("id") Long relativeId);
+
+    /** Giảm counter sự kiện khi xoá event (min 0). */
+    @Modifying
+    @Query("UPDATE Relative r SET r.totalEvents = r.totalEvents - 1 WHERE r.id = :id AND r.totalEvents > 0")
+    void decrementRelativeEventCount(@Param("id") Long relativeId);
+
 }

@@ -31,3 +31,29 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# ── Maven build output ───────────────────────────────────────────
+target/
+*.jar
+*.war
+
+# ── IDE ─────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.class
+
+# ── Environment variables (QUAN TRONG - KHONG COMMIT) ────────────
+.env
+.env.*
+!.env.example      # chi commit file mau, khong co gia tri that
+
+# ── Upload files ────────────────────────────────────────────────
+uploads/
+
+# ── Log files ───────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS files ────────────────────────────────────────────────────
+.DS_Store

@@ -1,10 +1,10 @@
 package com.demo.event.repository;
 
 import com.demo.event.model.entity.Event;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
-import java.awt.print.Pageable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;

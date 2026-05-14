@@ -1,0 +1,77 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /          # hoac /api neu can prefix toan cuc
+  task:
+    scheduling:
+      pool:
+        size: 2                   # so thread cho @Scheduled jobs
+spring:
+  # ── DATABASE ────────────────────────────────────────────────────────
+  datasource:
+    url: jdbc:mysql://localhost:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: 1234567890
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10      # so connection toi da trong pool
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # ── JPA / HIBERNATE ─────────────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: validate         # dung validate, khong de create-drop
+    show-sql: false              # bat true khi debug
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        default_batch_fetch_size: 100
+
+  # ── JACKSON (toan cuc) ───────────────────────────────────────────────
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false   # LocalDate -> "2026-05-15"
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: Asia/Ho_Chi_Minh
+
+  # ── MULTIPART (upload avatar) ────────────────────────────────────────
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB         # kich thuoc toi da moi file
+      max-request-size: 6MB      # kich thuoc toi da toan request
+
+# ── JWT ─────────────────────────────────────────────────────────────────
+app:
+  jwt:
+    # QUAN TRONG: doi secret nay truoc khi deploy production!
+    # Phai dai hon 256 bit (32 ky tu) cho HMAC-SHA256
+    secret: nhac-su-kien-super-secret-key-min-32-chars!!
+    expiration: 86400000          # Access token: 24 gio (ms)
+    refresh-expiration: 604800000 # Refresh token: 7 ngay (ms)
+  upload:
+    avatar-dir: uploads/avatars   # Thu muc luu anh dai dien
+
+# ── ACTUATOR ────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ── LOGGING ─────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.app.nhacsu: DEBUG         # app code: DEBUG
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN       # bat DEBUG de xem SQL query
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+

@@ -29,6 +29,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         // Tất cả còn lại yêu cầu JWT
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter,

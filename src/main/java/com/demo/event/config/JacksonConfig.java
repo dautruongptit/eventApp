@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -37,5 +39,16 @@ public class JacksonConfig {
         mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 
         return mapper;
+    }
+    @PostConstruct
+    public void loadDotenv() {
+        Dotenv dotenv = Dotenv.configure()
+                .directory("./")           // hoặc .ignoreIfMissing()
+                .ignoreIfMissing()
+                .load();
+
+        dotenv.entries().forEach(entry ->
+                System.setProperty(entry.getKey(), entry.getValue())
+        );
     }
 }

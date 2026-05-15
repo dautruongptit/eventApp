@@ -1,77 +1,122 @@
+# ════════════════════════════════════════════════════════════════
+# application.yml — Nhac Su Kien App v2.0.0
+# Tat ca gia tri doc tu bien moi truong ${VAR:default}
+# Tham khao .env.example de biet cac bien can thiet
+# ════════════════════════════════════════════════════════════════
+
+# ── SERVER ──────────────────────────────────────────────────────
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
-    context-path: /          # hoac /api neu can prefix toan cuc
-  task:
-    scheduling:
-      pool:
-        size: 2                   # so thread cho @Scheduled jobs
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# ── SPRING ──────────────────────────────────────────────────────
 spring:
-  # ── DATABASE ────────────────────────────────────────────────────────
+  application:
+    name: event_app
+  # ── DATASOURCE / HIKARICP ──────────────────────────────────
   datasource:
-    url: jdbc:mysql://localhost:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh
-    username: root
-    password: 1234567890
+    url: ${DB_URL:jdbc:mysql://localhost:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:1234567890}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 10      # so connection toi da trong pool
-      minimum-idle: 2
-      connection-timeout: 30000
+      maximum-pool-size: ${DB_POOL_SIZE:10}     # Tong connection toi da
+      minimum-idle: ${DB_MIN_IDLE:2}            # Connection luon san sang
+      connection-timeout: 30000                 # 30s cho lay connection
+      idle-timeout: 600000                      # 10 phut xoa idle connection
+      max-lifetime: 1800000                     # 30 phut doi moi connection
+      pool-name: NhacSuKienPool
 
-  # ── JPA / HIBERNATE ─────────────────────────────────────────────────
+  # ── JPA / HIBERNATE ─────────────────────────────────────────
   jpa:
     hibernate:
-      ddl-auto: validate         # dung validate, khong de create-drop
-    show-sql: false              # bat true khi debug
+      ddl-auto: ${JPA_DDL_AUTO:validate}        # validate | update | none
+    show-sql: ${JPA_SHOW_SQL:true}             # bat true khi debug SQL
+    open-in-view: false                         # Tat lazy loading ngoai transaction
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
-        default_batch_fetch_size: 100
+        format_sql: false
+        default_batch_fetch_size: 100           # Optimize N+1 query
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
 
-  # ── JACKSON (toan cuc) ───────────────────────────────────────────────
+  # ── JACKSON ─────────────────────────────────────────────────
   jackson:
     serialization:
-      write-dates-as-timestamps: false   # LocalDate -> "2026-05-15"
+      write-dates-as-timestamps: false          # LocalDate -> "2026-05-15"
       fail-on-empty-beans: false
     deserialization:
       fail-on-unknown-properties: false
-    time-zone: Asia/Ho_Chi_Minh
+    time-zone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
+    default-property-inclusion: non_null        # Bo qua field null trong JSON
 
-  # ── MULTIPART (upload avatar) ────────────────────────────────────────
+  # ── MULTIPART (upload avatar) ────────────────────────────────
   servlet:
     multipart:
       enabled: true
-      max-file-size: 5MB         # kich thuoc toi da moi file
-      max-request-size: 6MB      # kich thuoc toi da toan request
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:5MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:6MB}
 
-# ── JWT ─────────────────────────────────────────────────────────────────
+  # ── MESSAGES / i18n ─────────────────────────────────────────
+  messages:
+    basename: classpath:i18n/messages           # Doc tu MessageConfig.java
+    encoding: UTF-8
+    cache-duration: 3600s
+
+  # ── TASK SCHEDULING (ReminderScheduler) ─────────────────────
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULER_POOL_SIZE:2}          # So thread cho @Scheduled
+
+# ── APP CUSTOM PROPERTIES ───────────────────────────────────────
 app:
+  # JWT — JWT_SECRET BAT BUOC, khong co gia tri mac dinh
+  # Generate: openssl rand -base64 64
   jwt:
-    # QUAN TRONG: doi secret nay truoc khi deploy production!
-    # Phai dai hon 256 bit (32 ky tu) cho HMAC-SHA256
-    secret: nhac-su-kien-super-secret-key-min-32-chars!!
-    expiration: 86400000          # Access token: 24 gio (ms)
-    refresh-expiration: 604800000 # Refresh token: 7 ngay (ms)
+    secret: ${JWT_SECRET}                       # BAT BUOC — khong co default
+    expiration: ${JWT_EXPIRATION:86400000}      # Access token: 24h (ms)
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 ngay (ms)
+  # Upload avatar
   upload:
-    avatar-dir: uploads/avatars   # Thu muc luu anh dai dien
+    avatar-dir: ${UPLOAD_AVATAR_DIR:uploads/avatars}
+  # Timezone
+  timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
 
-# ── ACTUATOR ────────────────────────────────────────────────────────────
+# ── ACTUATOR ────────────────────────────────────────────────────
 management:
   endpoints:
     web:
+      base-path: /actuator
       exposure:
-        include: health,info
+        include: ${ACTUATOR_ENDPOINTS:health,info}
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: when-authorized             # Chi hien thi khi co JWT
+  info:
+    app:
+      name: App Su Kien
+      version: "@project.version@"
 
-# ── LOGGING ─────────────────────────────────────────────────────────────
+# ── LOGGING ─────────────────────────────────────────────────────
 logging:
   level:
-    com.app.nhacsu: DEBUG         # app code: DEBUG
-    org.springframework.security: WARN
-    org.hibernate.SQL: WARN       # bat DEBUG de xem SQL query
+    root:                          WARN
+    com.app.nhacsu:                ${LOG_LEVEL_APP:INFO}
+    org.springframework.security:  ${LOG_LEVEL_SECURITY:WARN}
+    org.hibernate.SQL:             ${LOG_LEVEL_SQL:WARN}
+    org.hibernate.type.descriptor: WARN
+    com.zaxxer.hikari:             WARN
   pattern:
-    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file:    "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE:logs/envent-app.log}
+    max-size: 10MB
+    max-history: 30

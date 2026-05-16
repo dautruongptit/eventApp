@@ -38,4 +38,5 @@ public class AuthResponse {
      * POST /api/v1/auth/refresh  { "refreshToken": "..." }
      */
     private String  refreshToken;
+
 }

@@ -7,7 +7,9 @@ import com.demo.event.model.dto.request.RegisterRequest;
 import com.demo.event.model.dto.request.UpdateSettingsRequest;
 import com.demo.event.model.dto.response.AuthResponse;
 import com.demo.event.model.dto.response.UserProfileResponse;
+import com.demo.event.model.entity.Role;
 import com.demo.event.model.entity.User;
+import com.demo.event.repository.RoleRepository;
 import com.demo.event.repository.UserRepository;
 import com.demo.event.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +21,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-
+    private final RoleRepository roleRepository;
     private final UserRepository userRepo;
     private final PasswordEncoder     passwordEncoder;
     private final JwtTokenProvider jwtProvider;
@@ -35,6 +39,11 @@ public class AuthService {
         if (userRepo.existsByEmail(req.getEmail()))
             throw new BadRequestException("Email này đã được sử dụng");
 
+        // Lấy ROLE_USER từ DB
+        Role userRole = roleRepository
+                .findByName(Role.RoleName.ROLE_USER.name())
+                .orElseThrow(() -> new ResourceNotFoundException("Role USER chưa được khởi tạo"));
+
         User user = User.builder()
                 .fullName(req.getFullName())
                 .email(req.getEmail())
@@ -44,6 +53,7 @@ public class AuthService {
                 .isActive(true)
                 .totalEvents(0)
                 .totalRelatives(0)
+                .roles(new HashSet<>(Set.of(userRole)))     // gán ROLE_USER
                 .build();
 
         User saved = userRepo.save(user);
@@ -135,11 +145,43 @@ public class AuthService {
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .accessToken(jwtProvider.generateAccessToken(user.getId()))
+                .accessToken(jwtProvider.generateAccessToken(user.getId(), user.getRoles()))
                 .refreshToken(jwtProvider.generateRefreshToken(user.getId()))
                 .build();
     }
+// ── DEACTIVATE USER (Admin only) ────────────────────────────────────
 
+    /**
+     * Khoá tài khoản user (chỉ Admin được gọi endpoint này).
+     * Endpoint: PUT /api/v1/users/{id}/deactivate
+     * Phân quyền: @PreAuthorize("hasRole('ADMIN')") trong UserController
+     */
+    @Transactional
+    public void deactivateUser(Long userId) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại: " + userId));
+        user.setIsActive(false);
+        userRepo.save(user);
+    }
+    // ── GRANT ADMIN ROLE (Admin only) ────────────────────────────────────
+
+    /**
+     * Cấp role ADMIN cho một user cụ thể.
+     * Endpoint: PUT /api/v1/users/{id}/grant-admin
+     * Phân quyền: @PreAuthorize("hasRole('ADMIN')") trong UserController
+     */
+    @Transactional
+    public void grantAdminRole(Long userId) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại: " + userId));
+
+        Role adminRole = roleRepository
+                .findByName(Role.RoleName.ROLE_ADMIN.name())
+                .orElseThrow(() -> new ResourceNotFoundException("Role ADMIN chưa được khởi tạo"));
+
+        user.getRoles().add(adminRole);
+        userRepo.save(user);
+    }
     private UserProfileResponse toProfileResponse(User u) {
         return UserProfileResponse.builder()
                 .id(u.getId())

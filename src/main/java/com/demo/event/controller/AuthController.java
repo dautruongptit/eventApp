@@ -5,6 +5,7 @@ import com.demo.event.model.dto.request.RegisterRequest;
 import com.demo.event.model.dto.request.UpdateSettingsRequest;
 import com.demo.event.model.dto.response.ApiResponse;
 import com.demo.event.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,11 +33,13 @@ public class AuthController {
     }
 
     // POST /api/v1/auth/login
-    @PostMapping("/login")
     public ResponseEntity<ApiResponse<?>> login(
-            @Valid @RequestBody LoginRequest req) {
-        return ResponseEntity.ok(ApiResponse.success(authService.login(req)));
+            @Valid @RequestBody LoginRequest req,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(
+                ApiResponse.success(authService.login(req, httpRequest)));
     }
+
 
     // POST /api/v1/auth/refresh
     @PostMapping("/refresh")

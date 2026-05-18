@@ -7,11 +7,16 @@ import com.demo.event.model.dto.request.RegisterRequest;
 import com.demo.event.model.dto.request.UpdateSettingsRequest;
 import com.demo.event.model.dto.response.AuthResponse;
 import com.demo.event.model.dto.response.UserProfileResponse;
+import com.demo.event.model.entity.LoginHistory;
 import com.demo.event.model.entity.Role;
 import com.demo.event.model.entity.User;
+import com.demo.event.repository.LoginHistoryRepository;
 import com.demo.event.repository.RoleRepository;
 import com.demo.event.repository.UserRepository;
 import com.demo.event.security.JwtTokenProvider;
+import com.demo.event.util.DeviceParser;
+import com.demo.event.util.MessageHelper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -32,6 +38,12 @@ public class AuthService {
     private final UserRepository userRepo;
     private final PasswordEncoder     passwordEncoder;
     private final JwtTokenProvider jwtProvider;
+    private final LoginHistoryRepository loginHistoryRepo;
+    private final DeviceParser deviceParser;
+    private final MessageHelper messageHelper;
+    // === CONSTANT: giới hạn nghiệp vụ ===
+    private static final int    MAX_FAILED_ATTEMPTS  = 5;          // khoa sau 5 lan sai
+    private static final long   LOCK_DURATION_MINUTES = 30L;       // khoa 30 phut
 
     // ── REGISTER ────────────────────────────────────────────────────────
     @Transactional
@@ -196,4 +208,116 @@ public class AuthService {
                 .createdAt(u.getCreatedAt())
                 .build();
     }
+
+    // === PHƯƠNG THỨC LOGIN ĐÃ CẬP NHẬT ===
+    public AuthResponse login(LoginRequest req,
+                              HttpServletRequest httpRequest) {
+
+        // 1. Tim user theo email
+        User user = userRepo.findByEmail(req.getEmail())
+                .orElse(null);
+
+        // 2. Email khong ton tai → luu lich su that bai an danh
+        if (user == null) {
+            throw new BadRequestException(
+                    messageHelper.get("auth.email.not.found"));
+        }
+
+        // 3. Tai khoan bi vo hieu hoa / khoa vinh vien / da xoa
+        if (!user.canLogin()) {
+            LoginHistory.FailureReason reason =
+                    switch (user.getStatus()) {
+                        case LOCKED  -> LoginHistory.FailureReason.ACCOUNT_LOCKED;
+                        case BANNED, DELETED, INACTIVE -> LoginHistory.FailureReason.ACCOUNT_INACTIVE;
+                        default      -> LoginHistory.FailureReason.ACCOUNT_INACTIVE;
+                    };
+            saveLoginHistory(user, httpRequest, false, reason);
+            throw new BadRequestException(
+                    messageHelper.get("auth.account.status." + user.getStatus().getCode()));
+        }
+
+        // 4. Kiem tra tai khoan bi khoa tam thoi
+        if (user.isCurrentlyLocked()) {
+            saveLoginHistory(user, httpRequest, false,
+                    LoginHistory.FailureReason.ACCOUNT_LOCKED);
+            throw new BadRequestException(
+                    messageHelper.get("auth.account.locked",
+                            user.getMinutesUntilUnlock()));
+        }
+
+        // 5. Kiem tra mat khau
+        if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
+            handleFailedLogin(user, httpRequest);
+            // Sau khi xu ly, nem loi (co the bao gom thong bao so lan con lai)
+            int remaining = MAX_FAILED_ATTEMPTS - user.getFailedLoginCount();
+            if (remaining <= 0) {
+                throw new BadRequestException(
+                        messageHelper.get("auth.account.just.locked",
+                                LOCK_DURATION_MINUTES));
+            }
+            throw new BadRequestException(
+                    messageHelper.get("auth.password.incorrect.with.count",
+                            remaining));
+        }
+
+        // 6. Dang nhap thanh cong → reset va cap nhat thong tin
+        handleSuccessLogin(user, httpRequest);
+
+        return buildAuthResponse(user);
+    }
+    // === XỬ LÝ ĐĂNG NHẬP SAI ===
+    @Transactional
+    public void handleFailedLogin(User user, HttpServletRequest req) {
+        user.setFailedLoginCount(user.getFailedLoginCount() + 1);
+        user.setLastFailedAt(LocalDateTime.now());
+
+        // Kiem tra co vuot nguong khoa khong
+        if (user.getFailedLoginCount() >= MAX_FAILED_ATTEMPTS) {
+            user.setLockedUntil(
+                    LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES));
+        }
+
+        userRepo.save(user);
+        saveLoginHistory(user, req, false,
+                LoginHistory.FailureReason.WRONG_PASSWORD);
+    }
+
+    // === XỬ LÝ ĐĂNG NHẬP THÀNH CÔNG ===
+    @Transactional
+    public void handleSuccessLogin(User user, HttpServletRequest req) {
+        // Reset dem that bai
+        user.setFailedLoginCount(0);
+        user.setLockedUntil(null);
+        user.setLastFailedAt(null);
+        // Cap nhat thong tin dang nhap
+        user.setLastLoginAt(LocalDateTime.now());
+        user.setTotalLoginCount(user.getTotalLoginCount() + 1);
+        user.setLastLoginIp(deviceParser.extractIp(req));
+        userRepo.save(user);
+        saveLoginHistory(user, req, true, null);
+    }
+
+    // === LƯU LỊCH SỬ ĐĂNG NHẬP ===
+    private void saveLoginHistory(User user,
+                                  HttpServletRequest req,
+                                  boolean success,
+                                  LoginHistory.FailureReason reason) {
+        String ua    = req.getHeader("User-Agent");
+        String ip    = deviceParser.extractIp(req);
+
+        LoginHistory history = LoginHistory.builder()
+                .user(user)
+                .ipAddress(ip)
+                .userAgent(ua)
+                .deviceType(deviceParser.parseDeviceType(ua))
+                .os(deviceParser.parseOs(ua))
+                .browser(deviceParser.parseBrowser(ua))
+                .isSuccess(success)
+                .failureReason(reason)
+                .loginAt(LocalDateTime.now())
+                .build();
+
+        loginHistoryRepo.save(history);
+    }
+
 }

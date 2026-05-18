@@ -74,4 +74,57 @@ public class User {
                 .anyMatch(r -> r.getName().equals(roleName.name()));
     }
 
+    /**
+     * Trang thai tai khoan theo UserStatus enum.
+     * Luu ma 3 ky tu: REG, VRF, ACT, INA, LCK, BAN, DEL.
+     * Thay the TINYINT is_active cu.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 3, columnDefinition = "VARCHAR(3) DEFAULT 'REG'")
+    @Builder.Default
+    private UserStatus status = UserStatus.REGISTERED;
+
+    // ── Login tracking (Ch.20) ───────────────────────────────────────────
+    @Column(name = "failed_login_count", nullable = false)
+    @Builder.Default
+    private Integer failedLoginCount = 0;
+
+    @Column(name = "last_failed_at")
+    private LocalDateTime lastFailedAt;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    @Column(name = "total_login_count", nullable = false)
+    @Builder.Default
+    private Integer totalLoginCount = 0;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
+    @Column(name = "last_login_ip", length = 45)
+    private String lastLoginIp;
+
+    public boolean isCurrentlyLocked() {
+        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
+    }
+
+    public long getMinutesUntilUnlock() {
+        if (!isCurrentlyLocked()) return 0;
+        return java.time.temporal.ChronoUnit.MINUTES
+                .between(LocalDateTime.now(), lockedUntil);
+    }
+
+    /** Kiem tra status co phai active / hoat dong binh thuong. */
+    public boolean isActive() {
+        return UserStatus.ACTIVE.equals(this.status);
+    }
+
+    /** Kiem tra tai khoan co the dang nhap (ACT hoac VRF). */
+    public boolean canLogin() {
+        return status == UserStatus.ACTIVE
+                || status == UserStatus.VERIFIED;
+    }
+
+
 }

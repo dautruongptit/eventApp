@@ -4,6 +4,7 @@ import com.demo.event.model.dto.response.ApiResponse;
 import com.demo.event.model.dto.response.LoginHistoryResponse;
 import com.demo.event.repository.LoginHistoryRepository;
 import com.demo.event.service.AuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@Tag(name = "User Management", description = "Profile ca nhan va quan tri user (Admin)")
 public class UserController {
 
     private final AuthService authService;

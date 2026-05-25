@@ -51,6 +51,16 @@ public class SecurityConfig {
                         // ── Tất cả còn lại: cần JWT hợp lệ (bất kỳ role) ─────────
                         // Phân quyền ADMIN/USER được xử lý bằng @PreAuthorize
                         // trực tiếp trên từng method trong UserController
+
+                        // ── SWAGGER UI (chi mo khi SWAGGER_ENABLED=true) ──
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/api-docs",
+                                "/api-docs/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         .anyRequest().authenticated())
 
                 // Thêm JWT filter TRƯỚC UsernamePasswordAuthenticationFilter

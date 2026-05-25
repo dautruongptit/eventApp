@@ -3,6 +3,7 @@ package com.demo.event.controller;
 import com.demo.event.model.dto.request.CreateEventRequest;
 import com.demo.event.model.dto.response.ApiResponse;
 import com.demo.event.service.EventService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/events")
 @RequiredArgsConstructor
+@Tag(name = "Events", description = "Quan ly su kien ca nhan va su kien nguoi than")
 public class EventController {
 
     private final EventService eventService;

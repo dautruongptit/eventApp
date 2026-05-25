@@ -2,6 +2,7 @@ package com.demo.event.controller;
 
 import com.demo.event.model.dto.response.ApiResponse;
 import com.demo.event.service.HomeService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/home")
 @RequiredArgsConstructor
+@Tag(name = "Home Dashboard", description = "Du lieu tong hop man hinh Home")
 public class HomeController {
 
     private final HomeService homeService;

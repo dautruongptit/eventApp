@@ -2,6 +2,7 @@ package com.demo.event.controller;
 
 import com.demo.event.model.dto.response.ApiResponse;
 import com.demo.event.service.NotificationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
+@Tag(name = "Notifications", description = "Thong bao va trang thai da doc / chua doc")
 public class NotificationController {
 
     private final NotificationService notifService;

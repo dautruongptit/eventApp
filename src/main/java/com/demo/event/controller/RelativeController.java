@@ -3,6 +3,7 @@ package com.demo.event.controller;
 import com.demo.event.model.dto.request.CreateRelativeRequest;
 import com.demo.event.model.dto.response.ApiResponse;
 import com.demo.event.service.RelativeService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/relatives")
 @RequiredArgsConstructor
+@Tag(name = "Relatives", description = "Quan ly nguoi than theo nhom")
 public class RelativeController {
 
     private final RelativeService relativeService;

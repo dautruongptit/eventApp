@@ -7,22 +7,22 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class ApiResponse<T> {
+public class BaseResponse<T> {
     private boolean success;
     private String message;
     private T data;
     private LocalDateTime timestamp;
 
-    public static <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
+    public static <T> BaseResponse<T> success(T data) {
+        return BaseResponse.<T>builder()
                 .success(true)
                 .data(data)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
-    public static ApiResponse<?> error(String message) {
-        return ApiResponse.builder()
+    public static BaseResponse<?> error(String message) {
+        return BaseResponse.builder()
                 .success(false)
                 .message(message)
                 .timestamp(LocalDateTime.now())

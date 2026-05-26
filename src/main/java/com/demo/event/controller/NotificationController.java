@@ -1,6 +1,6 @@
 package com.demo.event.controller;
 
-import com.demo.event.model.dto.response.ApiResponse;
+import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.service.NotificationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +22,12 @@ public class NotificationController {
      * Danh sách thông báo của user hiện tại, phân trang, mới nhất trước.
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getAll(
+    public ResponseEntity<BaseResponse<?>> getAll(
             @AuthenticationPrincipal Long userId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<?> result = notifService.getNotifications(userId, page, size);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(BaseResponse.success(result));
     }
 
     /**
@@ -36,10 +36,10 @@ public class NotificationController {
      * VD: { "success": true, "data": 3 }
      */
     @GetMapping("/unread-count")
-    public ResponseEntity<ApiResponse<?>> getUnreadCount(
+    public ResponseEntity<BaseResponse<?>> getUnreadCount(
             @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(
-                ApiResponse.success(notifService.countUnread(userId)));
+                BaseResponse.success(notifService.countUnread(userId)));
     }
 
     /**
@@ -47,10 +47,10 @@ public class NotificationController {
      * Đánh dấu một thông báo cụ thể là đã đọc.
      */
     @PutMapping("/{id}/read")
-    public ResponseEntity<ApiResponse<?>> markAsRead(
+    public ResponseEntity<BaseResponse<?>> markAsRead(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 notifService.markAsRead(id, userId)));
     }
 
@@ -59,10 +59,10 @@ public class NotificationController {
      * Đánh dấu tất cả thông báo của user là đã đọc.
      */
     @PutMapping("/read-all")
-    public ResponseEntity<ApiResponse<?>> markAllAsRead(
+    public ResponseEntity<BaseResponse<?>> markAllAsRead(
             @AuthenticationPrincipal Long userId) {
         notifService.markAllAsRead(userId);
         return ResponseEntity.ok(
-                ApiResponse.success("Tat ca thong bao da duoc danh dau da doc"));
+                BaseResponse.success("Tat ca thong bao da duoc danh dau da doc"));
     }
 }

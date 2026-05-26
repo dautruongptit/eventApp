@@ -1,7 +1,7 @@
 package com.demo.event.controller;
 
 import com.demo.event.model.dto.request.CreateRelativeRequest;
-import com.demo.event.model.dto.response.ApiResponse;
+import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.service.RelativeService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -10,6 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/api/v1/relatives")
@@ -24,11 +29,19 @@ public class RelativeController {
      * Query params: group_type (GIA_DINH|VO_CHONG|CON_CAI|BAN_BE), search (tên)
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getAll(
+    @Operation(
+            summary = "Lay danh sach nguoi than",
+            description = "Ho tro filter theo nhom quan he va tim kiem theo ten.",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thanh cong"),
+            @ApiResponse(responseCode = "401", description = "Token het han hoac khong hop le")
+    })
+    public ResponseEntity<BaseResponse<?>> getAll(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) String groupType,
             @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 relativeService.getRelatives(userId, groupType, search)));
     }
 
@@ -38,9 +51,9 @@ public class RelativeController {
      * VD: [{groupType:"GIA_DINH", displayName:"Gia dinh", count:2}, ...]
      */
     @GetMapping("/groups")
-    public ResponseEntity<ApiResponse<?>> getGroups(
+    public ResponseEntity<BaseResponse<?>> getGroups(
             @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 relativeService.getGroupSummary(userId)));
     }
 
@@ -49,10 +62,10 @@ public class RelativeController {
      * Chi tiết người thân + danh sách sự kiện liên quan.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> getDetail(
+    public ResponseEntity<BaseResponse<?>> getDetail(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 relativeService.getDetail(id, userId)));
     }
 
@@ -61,12 +74,12 @@ public class RelativeController {
      * Thêm người thân mới. 201 Created khi thành công.
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> create(
+    public ResponseEntity<BaseResponse<?>> create(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody CreateRelativeRequest req) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(relativeService.create(userId, req)));
+                .body(BaseResponse.success(relativeService.create(userId, req)));
     }
 
     /**
@@ -74,11 +87,11 @@ public class RelativeController {
      * Cập nhật thông tin người thân. Trả 403 nếu không phải chủ sở hữu.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> update(
+    public ResponseEntity<BaseResponse<?>> update(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody CreateRelativeRequest req) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 relativeService.update(id, userId, req)));
     }
 
@@ -87,10 +100,10 @@ public class RelativeController {
      * Xoá người thân và cascade xoá toàn bộ sự kiện liên quan.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> delete(
+    public ResponseEntity<BaseResponse<?>> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId) {
         relativeService.delete(id, userId);
-        return ResponseEntity.ok(ApiResponse.success("Xoa nguoi than thanh cong"));
+        return ResponseEntity.ok(BaseResponse.success("Xoa nguoi than thanh cong"));
     }
 }

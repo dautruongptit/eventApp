@@ -3,7 +3,7 @@ package com.demo.event.controller;
 import com.demo.event.model.dto.request.LoginRequest;
 import com.demo.event.model.dto.request.RegisterRequest;
 import com.demo.event.model.dto.request.UpdateSettingsRequest;
-import com.demo.event.model.dto.response.ApiResponse;
+import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,73 +27,73 @@ public class AuthController {
 
     // POST /api/v1/auth/register
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<?>> register(
+    public ResponseEntity<BaseResponse<?>> register(
             @Valid @RequestBody RegisterRequest req) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(authService.register(req)));
+                .body(BaseResponse.success(authService.register(req)));
     }
 
     // POST /api/v1/auth/login
-    public ResponseEntity<ApiResponse<?>> login(
+    public ResponseEntity<BaseResponse<?>> login(
             @Valid @RequestBody LoginRequest req,
             HttpServletRequest httpRequest) {
         return ResponseEntity.ok(
-                ApiResponse.success(authService.login(req, httpRequest)));
+                BaseResponse.success(authService.login(req, httpRequest)));
     }
 
 
     // POST /api/v1/auth/refresh
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<?>> refresh(
+    public ResponseEntity<BaseResponse<?>> refresh(
             @RequestBody Map<String, String> body) {
         String refreshToken = body.get("refreshToken");
         return ResponseEntity.ok(
-                ApiResponse.success(authService.refreshToken(refreshToken)));
+                BaseResponse.success(authService.refreshToken(refreshToken)));
     }
 
     // POST /api/v1/auth/logout  (client xoá token phía client)
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<?>> logout() {
-        return ResponseEntity.ok(ApiResponse.success("Dang xuat thanh cong"));
+    public ResponseEntity<BaseResponse<?>> logout() {
+        return ResponseEntity.ok(BaseResponse.success("Dang xuat thanh cong"));
     }
 
     // ── Profile endpoints (dùng prefix /users/me thực tế) ──────────────
     // GET /api/v1/users/me  →  đặt trong UserController riêng
     // PUT /api/v1/users/me
     @PutMapping("/users/me")
-    public ResponseEntity<ApiResponse<?>> updateProfile(
+    public ResponseEntity<BaseResponse<?>> updateProfile(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody RegisterRequest req) {
         return ResponseEntity.ok(
-                ApiResponse.success(authService.updateProfile(userId, req)));
+                BaseResponse.success(authService.updateProfile(userId, req)));
     }
 
     // PUT /api/v1/users/me/settings
     @PutMapping("/users/me/settings")
-    public ResponseEntity<ApiResponse<?>> updateSettings(
+    public ResponseEntity<BaseResponse<?>> updateSettings(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody UpdateSettingsRequest req) {
         return ResponseEntity.ok(
-                ApiResponse.success(authService.updateSettings(userId, req)));
+                BaseResponse.success(authService.updateSettings(userId, req)));
     }
 
     // PUT /api/v1/users/me/avatar  (multipart upload)
     @PutMapping(value = "/users/me/avatar",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<?>> uploadAvatar(
+    public ResponseEntity<BaseResponse<?>> uploadAvatar(
             @AuthenticationPrincipal Long userId,
             @RequestParam("file") MultipartFile file) throws Exception {
         return ResponseEntity.ok(
-                ApiResponse.success(authService.uploadAvatar(userId, file)));
+                BaseResponse.success(authService.uploadAvatar(userId, file)));
     }
 
     // POST /api/v1/users/me/google-calendar
     @PostMapping("/users/me/google-calendar")
-    public ResponseEntity<ApiResponse<?>> connectGoogleCalendar(
+    public ResponseEntity<BaseResponse<?>> connectGoogleCalendar(
             @AuthenticationPrincipal Long userId,
             @RequestBody Map<String, String> body) {
         authService.connectGoogleCalendar(userId, body.get("code"));
-        return ResponseEntity.ok(ApiResponse.success("Ket noi Google Calendar thanh cong"));
+        return ResponseEntity.ok(BaseResponse.success("Ket noi Google Calendar thanh cong"));
     }
 }

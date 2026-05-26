@@ -1,7 +1,7 @@
 package com.demo.event.controller;
 
 import com.demo.event.model.dto.request.CreateEventRequest;
-import com.demo.event.model.dto.response.ApiResponse;
+import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.service.EventService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,13 +25,13 @@ public class EventController {
      * Dùng cho màn hình "Sự kiện" — nhóm theo tháng ở phía client.
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getAll(
+    public ResponseEntity<BaseResponse<?>> getAll(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Long relativeId,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 eventService.getEvents(userId, type, relativeId, month, year)));
     }
 
@@ -40,10 +40,10 @@ public class EventController {
      * Dùng cho các card sự kiện trên màn hình Home.
      */
     @GetMapping("/upcoming")
-    public ResponseEntity<ApiResponse<?>> getUpcoming(
+    public ResponseEntity<BaseResponse<?>> getUpcoming(
             @AuthenticationPrincipal Long userId,
             @RequestParam(defaultValue = "5") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 eventService.getUpcoming(userId, limit)));
     }
 
@@ -52,10 +52,10 @@ public class EventController {
      * Chi tiết một sự kiện bao gồm danh sách reminder.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> getById(
+    public ResponseEntity<BaseResponse<?>> getById(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 eventService.getById(id, userId)));
     }
 
@@ -66,12 +66,12 @@ public class EventController {
      * Nếu relativeId có giá trị → sự kiện người thân.
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> create(
+    public ResponseEntity<BaseResponse<?>> create(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody CreateEventRequest req) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(eventService.create(userId, req)));
+                .body(BaseResponse.success(eventService.create(userId, req)));
     }
 
     /**
@@ -79,11 +79,11 @@ public class EventController {
      * Cập nhật sự kiện. Reminders cũ bị xoá và tạo lại.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> update(
+    public ResponseEntity<BaseResponse<?>> update(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody CreateEventRequest req) {
-        return ResponseEntity.ok(ApiResponse.success(
+        return ResponseEntity.ok(BaseResponse.success(
                 eventService.update(id, userId, req)));
     }
 
@@ -92,10 +92,10 @@ public class EventController {
      * Soft delete: đặt isActive = false, giảm cache counter.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> delete(
+    public ResponseEntity<BaseResponse<?>> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId) {
         eventService.delete(id, userId);
-        return ResponseEntity.ok(ApiResponse.success("Xoa su kien thanh cong"));
+        return ResponseEntity.ok(BaseResponse.success("Xoa su kien thanh cong"));
     }
 }

@@ -1,6 +1,6 @@
 package com.demo.event.controller;
 
-import com.demo.event.model.dto.response.ApiResponse;
+import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.model.dto.response.LoginHistoryResponse;
 import com.demo.event.repository.LoginHistoryRepository;
 import com.demo.event.service.AuthService;
@@ -27,10 +27,10 @@ public class UserController {
      *          language, darkMode, googleCalendarConnected.
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<?>> getMe(
+    public ResponseEntity<BaseResponse<?>> getMe(
             @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(
-                ApiResponse.success(authService.getProfile(userId)));
+                BaseResponse.success(authService.getProfile(userId)));
     }
 
     /**
@@ -39,7 +39,7 @@ public class UserController {
      * Bao gom: IP, thiet bi, OS, trinh duyet, ket qua, thoi gian.
      */
     @GetMapping("/me/login-history")
-    public ResponseEntity<ApiResponse<?>> getLoginHistory(
+    public ResponseEntity<BaseResponse<?>> getLoginHistory(
             @AuthenticationPrincipal Long userId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -59,7 +59,7 @@ public class UserController {
                         .loginAt(h.getLoginAt())
                         .build());
 
-        return ResponseEntity.ok(ApiResponse.success(history));
+        return ResponseEntity.ok(BaseResponse.success(history));
     }
 
     /**
@@ -68,7 +68,7 @@ public class UserController {
      */
     @GetMapping("/{id}/login-history")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<?>> getUserLoginHistory(
+    public ResponseEntity<BaseResponse<?>> getUserLoginHistory(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -83,7 +83,7 @@ public class UserController {
                                 ? h.getFailureReason().name() : null)
                         .loginAt(h.getLoginAt()).build());
 
-        return ResponseEntity.ok(ApiResponse.success(history));
+        return ResponseEntity.ok(BaseResponse.success(history));
     }
 
 }

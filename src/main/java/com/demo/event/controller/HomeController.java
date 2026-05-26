@@ -1,6 +1,6 @@
 package com.demo.event.controller;
 
-import com.demo.event.model.dto.response.ApiResponse;
+import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.service.HomeService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +28,10 @@ public class HomeController {
      * - googleCalendarConnected
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getHomeData(
+    public ResponseEntity<BaseResponse<?>> getHomeData(
             @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(
-                ApiResponse.success(homeService.getHomeData(userId)));
+                BaseResponse.success(homeService.getHomeData(userId)));
     }
 
     /**
@@ -39,9 +39,9 @@ public class HomeController {
      * Tab "Sự kiện của tôi" — chỉ lấy sự kiện bản thân (relative IS NULL).
      */
     @GetMapping("/my-events")
-    public ResponseEntity<ApiResponse<?>> getMyEvents(
+    public ResponseEntity<BaseResponse<?>> getMyEvents(
             @AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(
-                ApiResponse.success(homeService.getMyEvents(userId)));
+                BaseResponse.success(homeService.getMyEvents(userId)));
     }
 }

@@ -46,8 +46,10 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh").permitAll()
 
                         // ── Health check (cho load balancer / Docker) ────────────
-                        .requestMatchers("/actuator/health").permitAll()
-
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/internal/health-check"    // <- them vao
+                        ).permitAll()
                         // ── Tất cả còn lại: cần JWT hợp lệ (bất kỳ role) ─────────
                         // Phân quyền ADMIN/USER được xử lý bằng @PreAuthorize
                         // trực tiếp trên từng method trong UserController

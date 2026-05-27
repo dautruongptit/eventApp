@@ -1,5 +1,6 @@
 package com.demo.event.model.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Data;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BaseResponse<T> {
     private boolean success;
     private String message;
@@ -21,12 +23,22 @@ public class BaseResponse<T> {
                 .build();
     }
 
-    public static BaseResponse<?> error(String message) {
-        return BaseResponse.builder()
+    public static <T> BaseResponse<T> success(T data, String message) {
+        return BaseResponse.<T>builder()
+                .success(true)
+                .data(data)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static <T> BaseResponse<T> error(String message) {
+        return BaseResponse.<T>builder()
                 .success(false)
                 .message(message)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
+
 }
 

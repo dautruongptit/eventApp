@@ -20,7 +20,7 @@ spring:
     name: event_app
   # ── DATASOURCE / HIKARICP ──────────────────────────────────
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
+    url: ${DB_URL:jdbc:mysql:100.102.72.31:5900:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:1234567890}
     driver-class-name: com.mysql.cj.jdbc.Driver

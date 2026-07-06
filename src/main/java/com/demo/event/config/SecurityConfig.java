@@ -41,9 +41,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // ── Public: đăng ký, đăng nhập, refresh token ──────────
                         .requestMatchers(HttpMethod.POST,
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh").permitAll()
+                                "/auth/register",
+                                "/auth/login",
+                                "/auth/refresh").permitAll()
 
                         // ── Health check (cho load balancer / Docker) ────────────
                         .requestMatchers(

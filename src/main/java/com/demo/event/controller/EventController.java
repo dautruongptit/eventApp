@@ -12,7 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/events")
+@RequestMapping("/events")
 @RequiredArgsConstructor
 @Tag(name = "Events", description = "Quan ly su kien ca nhan va su kien nguoi than")
 public class EventController {

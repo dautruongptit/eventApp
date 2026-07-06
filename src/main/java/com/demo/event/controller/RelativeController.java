@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
-@RequestMapping("/api/v1/relatives")
+@RequestMapping("/relatives")
 @RequiredArgsConstructor
 @Tag(name = "Relatives", description = "Quan ly nguoi than theo nhom")
 public class RelativeController {

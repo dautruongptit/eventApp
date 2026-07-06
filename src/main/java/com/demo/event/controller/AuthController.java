@@ -18,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "Dang ky, dang nhap, refresh token, logout")
 public class AuthController {
@@ -35,6 +35,7 @@ public class AuthController {
     }
 
     // POST /api/v1/auth/login
+    @PostMapping("/login")
     public ResponseEntity<BaseResponse<?>> login(
             @Valid @RequestBody LoginRequest req,
             HttpServletRequest httpRequest) {

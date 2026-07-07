@@ -136,4 +136,4 @@ springdoc:
     tryItOutEnabled: true              # bat nut Try it out
     filter: true                       # o search box
   packages-to-scan: com.demo.event.controller
-  paths-to-match: /api/**
+  paths-to-match: /**

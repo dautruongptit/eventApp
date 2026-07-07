@@ -54,5 +54,6 @@ public class OpenApiConfig {
                 .addSecurityItem(new SecurityRequirement()
                         .addList(SECURITY_SCHEME));
     }
+
 }
 

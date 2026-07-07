@@ -1,4 +1,5 @@
 package com.demo.event.model.entity;
+import com.demo.event.model.converter.UserStatusConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -79,7 +80,7 @@ public class User {
      * Luu ma 3 ky tu: REG, VRF, ACT, INA, LCK, BAN, DEL.
      * Thay the TINYINT is_active cu.
      */
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = UserStatusConverter.class)
     @Column(nullable = false, length = 3, columnDefinition = "VARCHAR(3) DEFAULT 'REG'")
     @Builder.Default
     private UserStatus status = UserStatus.REGISTERED;

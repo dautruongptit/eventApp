@@ -45,7 +45,6 @@ target/
 
 # ── Environment variables (QUAN TRONG - KHONG COMMIT) ────────────
 .env
-.env.*
 !.env.example      # chi commit file mau, khong co gia tri that
 
 # ── Upload files ────────────────────────────────────────────────

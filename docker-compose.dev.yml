@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    ports:
+      - "8086:8086"
+    container_name: event_app
+    env_file: .env.dev
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SWAGGER_ENABLED:        "true"
+      FLYWAY_BASELINE:        "false"
+    restart: unless-stopped
+    networks:
+      - shared-network
+networks:
+  shared-network:
+    external: true  

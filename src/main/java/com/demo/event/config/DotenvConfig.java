@@ -16,15 +16,15 @@ public class DotenvConfig implements EnvironmentPostProcessor {
     public void postProcessEnvironment(ConfigurableEnvironment environment,
                                        SpringApplication application) {
         Dotenv dotenv = Dotenv.configure()
-                .ignoreIfMissing()   // không crash nếu không có file .env (production)
+                .directory("./")
+                .filename(".env.dev")
+                .ignoreIfMissing()
                 .load();
-
         Map<String, Object> props = new HashMap<>();
         dotenv.entries().forEach(entry ->
                 props.put(entry.getKey(), entry.getValue())
         );
 
-        // Thêm vào CUỐI — không override System env (quan trọng cho production)
         environment.getPropertySources()
                 .addLast(new MapPropertySource("dotenvProperties", props));
     }

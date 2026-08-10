@@ -6,10 +6,8 @@ import com.demo.event.model.dto.request.CreateEventRequest;
 import com.demo.event.model.dto.request.ReminderRequest;
 import com.demo.event.model.dto.response.EventResponse;
 import com.demo.event.model.dto.response.ReminderResponse;
-import com.demo.event.model.entity.Event;
-import com.demo.event.model.entity.EventReminder;
-import com.demo.event.model.entity.Relative;
-import com.demo.event.model.entity.User;
+import com.demo.event.model.entity.*;
+import com.demo.event.repository.EventParticipantRepository;
 import com.demo.event.repository.EventRepository;
 import com.demo.event.repository.RelativeRepository;
 import com.demo.event.repository.UserRepository;
@@ -33,6 +31,7 @@ public class EventService {
     private final EventRepository eventRepo;
     private final RelativeRepository relativeRepo;
     private final UserRepository userRepo;
+    private final EventParticipantRepository participantRepo;
 
     // ── GET UPCOMING (màn hình Home – tối đa limit sự kiện) ─────────────
     public List<EventResponse> getUpcoming(Long userId, int limit) {
@@ -72,11 +71,13 @@ public class EventService {
 
         // Resolve người thân (nullable – null = sự kiện bản thân)
         Relative relative = null;
-        if (req.getRelativeId() != null) {
+        if (req.getParticipantIds() != null && !req.getParticipantIds().isEmpty()) {
             relative = relativeRepo
                     .findByIdAndUserId(req.getRelativeId(), userId)
                     .orElseThrow(() ->
                             new ResourceNotFoundException("Nguoi than khong ton tai"));
+
+
         }
 
         Event event = Event.builder()
@@ -92,7 +93,7 @@ public class EventService {
                 .notes(req.getNotes())
                 .isActive(true)
                 .build();
-
+        saveParticipants(event, userId, req.getParticipantIds());
         // Map reminders từ request
         if (req.getReminders() != null && !req.getReminders().isEmpty()) {
             List<EventReminder> reminders = buildReminders(req.getReminders(), event);
@@ -181,6 +182,7 @@ public class EventService {
     /** Map Event entity -> EventResponse DTO. */
     public EventResponse toResponse(Event e, LocalDate today) {
         long daysUntil = ChronoUnit.DAYS.between(today, e.getEventDate());
+        EventResponse response = EventResponse.from(e, today);
 
         List<ReminderResponse> reminders = (e.getReminders() == null)
                 ? List.of()
@@ -192,6 +194,17 @@ public class EventService {
                         .isEnabled(r.getIsEnabled())
                         .build())
                 .collect(Collectors.toList());
+        List<EventParticipant> participants = participantRepo.findByEventId(e.getId());
+        if (!participants.isEmpty()) {
+            response.setParticipants(participants.stream()
+                    .map(ep -> EventResponse.ParticipantSummary.builder()
+                            .id(ep.getRelative().getId())
+                            .name(ep.getRelative().getName())
+                            .avatarUrl(ep.getRelative().getAvatarUrl())
+                            .build())
+                    .toList());
+        }
+        return response;
 
         return EventResponse.builder()
                 .id(e.getId())
@@ -211,5 +224,22 @@ public class EventService {
                 .reminders(reminders)
                 .build();
     }
+
+
+    private void saveParticipants(Event event, Long userId, List<Long> relativeIds) {
+       List<Relative> relatives = relativeRepo.findAllById(relativeIds).stream()
+           .filter(r -> r.getUser().getId().equals(userId))  // chi cho phep relative cua chinh user
+           .toList();
+
+       List<EventParticipant> participants = relatives.stream().map(r -> EventParticipant.builder()
+                .event(event)
+                .relative(r)
+               .build())
+           .toList();
+
+        participantRepo.saveAll(participants);
+    }
+
+
 }
 

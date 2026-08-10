@@ -2,11 +2,11 @@ package com.demo.event.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "roles")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,30 +16,13 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Ten role theo chuan Spring Security: phai bat dau bang "ROLE_"
-     * VD: ROLE_USER, ROLE_ADMIN
-     */
-    @Column(nullable = false, unique = true, length = 50)
-    private String name;
+    @Column(name = "name", nullable = false, unique = true, length = 50)
+    private String name;   // ROLE_USER, ROLE_ADMIN
 
-    @Column(length = 200)
+    @Column(name = "description", length = 200)
     private String description;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
-
-    /**
-     * Enum tien ich de tranh hardcode chuoi "ROLE_USER" trong code.
-     * Dung: Role.RoleName.ROLE_ADMIN.name()
-     */
     public enum RoleName {
-        ROLE_USER,
-        ROLE_ADMIN
+        ROLE_USER, ROLE_ADMIN
     }
 }

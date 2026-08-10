@@ -1,27 +1,44 @@
 package com.demo.event.model.dto.response;
 
-import lombok.*;
+import com.demo.event.model.entity.User;
+import lombok.Builder;
+import lombok.Data;
+
 import java.time.LocalDateTime;
 
-@Data @Builder
+@Data
+@Builder
 public class UserProfileResponse {
+
     private Long id;
+    private String username;
     private String fullName;
     private String email;
+    private String status;
     private String avatarUrl;
     private String language;
     private Boolean darkMode;
     private Integer totalEvents;
     private Integer totalRelatives;
-    private Integer daysUntilNextEvent; // tính từ DB
-    private Boolean googleCalendarConnected;
+    private Boolean isGoogleLinked;
+    private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
-    private Integer       failedLoginCount;  // So lan sai hien tai
-    private LocalDateTime lastLoginAt;       // Dang nhap thanh cong gan nhat
-    private LocalDateTime lastFailedAt;      // Dang nhap sai gan nhat
-    private Integer       totalLoginCount;   // Tong lan dang nhap thanh cong
-    private Boolean       isLocked;          // Tai khoan dang bi khoa?
-    private LocalDateTime lockedUntil;       // Khoa den khi nao (null = khong khoa)
-    private String        lastLoginIp;       // IP lan dang nhap cuoi
 
+    public static UserProfileResponse from(User u) {
+        return UserProfileResponse.builder()
+            .id(u.getId())
+            .username(u.getUsername())
+            .fullName(u.getFullName())
+            .email(u.getEmail())
+            .status(u.getStatus())
+            .avatarUrl(u.getAvatarUrl())
+            .language(u.getLanguage())
+            .darkMode(u.getDarkMode())
+            .totalEvents(u.getTotalEvents())
+            .totalRelatives(u.getTotalRelatives())
+            .isGoogleLinked(u.getGoogleId() != null)
+            .lastLoginAt(u.getLastLoginAt())
+            .createdAt(u.getCreatedAt())
+            .build();
+    }
 }

@@ -45,6 +45,7 @@ target/
 
 # ── Environment variables (QUAN TRONG - KHONG COMMIT) ────────────
 .env
+.env.*
 !.env.example      # chi commit file mau, khong co gia tri that
 
 # ── Upload files ────────────────────────────────────────────────
@@ -57,3 +58,5 @@ logs/
 # ── OS files ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+firebase-service-account.json
+src/main/resources/firebase-service-account.json

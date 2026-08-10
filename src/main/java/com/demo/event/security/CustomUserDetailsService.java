@@ -7,22 +7,23 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final UserRepository userRepo;
 
     @Override
-    @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
-        User user = userRepository
-                .findByEmailAndIsActiveTrue(email)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Khong tim thay user voi email: " + email));
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepo.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("Khong tim thay user: " + email));
+        return new CustomUserDetails(user);
+    }
+
+    public UserDetails loadUserById(Long userId) {
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new UsernameNotFoundException("Khong tim thay user id: " + userId));
         return new CustomUserDetails(user);
     }
 }

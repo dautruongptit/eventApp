@@ -1,65 +1,77 @@
 package com.demo.event.exception;
 
 import com.demo.event.model.dto.response.BaseResponse;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 400 Bad Request
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<BaseResponse<?>> handleBadRequest(
-            BadRequestException ex) {
+    public ResponseEntity<BaseResponse<?>> handleBadRequest(BadRequestException e) {
         return ResponseEntity.badRequest()
-                .body(BaseResponse.error(ex.getMessage()));
+            .body(BaseResponse.error(e.getMessage(), "BAD_REQUEST"));
     }
 
-    // 401 Unauthorized
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<BaseResponse<?>> handleUnauthorized(
-            UnauthorizedException ex) {
+    public ResponseEntity<BaseResponse<?>> handleUnauthorized(UnauthorizedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(BaseResponse.error(ex.getMessage()));
+            .body(BaseResponse.error(e.getMessage(), "UNAUTHORIZED"));
     }
 
-    // 404 Not Found
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<BaseResponse<?>> handleNotFound(
-            ResourceNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(BaseResponse.error(ex.getMessage()));
-    }
-
-    // 403 Forbidden (truy cập tài nguyên của user khác)
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<BaseResponse<?>> handleForbidden(
-            ForbiddenException ex) {
+    public ResponseEntity<BaseResponse<?>> handleForbidden(ForbiddenException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(BaseResponse.error(ex.getMessage()));
+            .body(BaseResponse.error(e.getMessage(), "FORBIDDEN"));
     }
 
-    // 422 Validation errors (@Valid)
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<BaseResponse<?>> handleNotFound(ResourceNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(BaseResponse.error(e.getMessage(), "NOT_FOUND"));
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<BaseResponse<?>> handleBadCredentials(BadCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(BaseResponse.error("Email hoặc mật khẩu không đúng", "UNAUTHORIZED"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<BaseResponse<?>> handleAccessDenied(AccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(BaseResponse.error("Bạn không có quyền thực hiện thao tác này", "FORBIDDEN"));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<BaseResponse<?>> handleValidation(
-            MethodArgumentNotValidException ex) {
-        String msg = ex.getBindingResult().getFieldErrors()
-                .stream()
-                .map(e -> e.getField() + ": " + e.getDefaultMessage())
-                .collect(Collectors.joining(", "));
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(BaseResponse.error(msg));
+    public ResponseEntity<BaseResponse<?>> handleValidation(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+            .map(err -> err.getField() + ": " + err.getDefaultMessage())
+            .collect(Collectors.joining(", "));
+        return ResponseEntity.badRequest()
+            .body(BaseResponse.error(message, "VALIDATION_ERROR"));
     }
 
-    // 500 Internal Server Error
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<BaseResponse<?>> handleConstraintViolation(ConstraintViolationException e) {
+        return ResponseEntity.badRequest()
+            .body(BaseResponse.error(e.getMessage(), "VALIDATION_ERROR"));
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<BaseResponse<?>> handleAll(Exception ex) {
-        return ResponseEntity.internalServerError()
-                .body(BaseResponse.error("Lỗi hệ thống: " + ex.getMessage()));
+    public ResponseEntity<BaseResponse<?>> handleGeneral(Exception e) {
+        log.error("[GlobalExceptionHandler] Loi khong xac dinh: ", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(BaseResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau", "INTERNAL_ERROR"));
     }
 }

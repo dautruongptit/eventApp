@@ -6,7 +6,7 @@
 
 # ── SERVER ──────────────────────────────────────────────────────
 server:
-  port: ${SERVER_PORT:8086}
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api/v1
     encoding:
@@ -18,34 +18,34 @@ server:
 spring:
   application:
     name: event_app
+
   # ── DATASOURCE / HIKARICP ──────────────────────────────────
   datasource:
-    url: ${DB_URL:jdbc:mysql:100.102.72.31:5900:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
+    url: ${DB_URL:jdbc:mysql://100.102.72.31:3306/event_app?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:1234567890}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:10}     # Tong connection toi da
-      minimum-idle: ${DB_MIN_IDLE:2}            # Connection luon san sang
-      connection-timeout: 30000                 # 30s cho lay connection
-      idle-timeout: 600000                      # 10 phut xoa idle connection
-      max-lifetime: 1800000                     # 30 phut doi moi connection
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
       pool-name: NhacSuKienPool
 
-  # ── JPA / HIBERNATE ─────────────────────────────────────────
+  # ── JPA / HIBERNATE (Ngang hàng với datasource) ───────────
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:validate}        # validate | update | none
-    show-sql: ${JPA_SHOW_SQL:true}             # bat true khi debug SQL
-    open-in-view: false                         # Tat lazy loading ngoai transaction
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    show-sql: ${JPA_SHOW_SQL:true}
+    open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: false
-        default_batch_fetch_size: 100           # Optimize N+1 query
+        default_batch_fetch_size: 100
         jdbc:
           time_zone: Asia/Ho_Chi_Minh
-
   # ── JACKSON ─────────────────────────────────────────────────
   jackson:
     serialization:
@@ -74,7 +74,19 @@ spring:
     scheduling:
       pool:
         size: ${SCHEDULER_POOL_SIZE:2}          # So thread cho @Scheduled
-
+  # spring.data.redis #
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX:8}
+          max-idle:   ${REDIS_POOL_IDLE:4}
+          min-idle:   1
+          max-wait:   1000ms
 # ── APP CUSTOM PROPERTIES ───────────────────────────────────────
 app:
   # JWT — JWT_SECRET BAT BUOC, khong co gia tri mac dinh
@@ -91,6 +103,8 @@ app:
   openapi:
     dev-url: http://localhost:8080
     prod-url: https://api.nhacsu.app
+  firebase:
+    credentials-path: firebase-service-account.json
 # ── ACTUATOR ────────────────────────────────────────────────────
 management:
   endpoints:

@@ -1,56 +1,102 @@
 package com.demo.event.model.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-@Entity @Table(name = "events")
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "events")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Event {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    /** Người thân chính liên quan — NULL = sự kiện của bản thân */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "relative_id")
-    private Relative relative; // NULL = sự kiện bản thân
+    private Relative relative;
 
-    @Column(nullable = false, length = 200)
+    @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "event_type", nullable = false)
-    private EventType eventType;
-
-    public enum EventType {
-        SINH_NHAT, KY_NIEM, LE,
-        NHA_O, HOA_DON, MUA_SAM, KHAC
-    }
+    /** Danh mục sự kiện — quản lý icon/màu từ DB (thay thế enum EventType cũ) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private EventCategory category;
 
     @Column(name = "event_date", nullable = false)
-    private java.time.LocalDate eventDate;
+    private LocalDate eventDate;
 
     @Column(name = "event_time")
-    private java.time.LocalTime eventTime;
+    private LocalTime eventTime;
 
     @Column(name = "is_recurring")
+    @Builder.Default
     private Boolean isRecurring = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "recurrence_type")
+    @Column(name = "recurrence_type", length = 15)
     private RecurrenceType recurrenceType;
-    public enum RecurrenceType { YEARLY, MONTHLY, WEEKLY }
 
-    @Column(columnDefinition = "TEXT")
+    /** Chỉ có giá trị khi recurrenceType = LUNAR_YEARLY — nguồn sự thật để tính lại ngày dương mỗi năm */
+    @Column(name = "lunar_day")
+    private Integer lunarDay;
+
+    @Column(name = "lunar_month")
+    private Integer lunarMonth;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "is_active",
-            columnDefinition = "TINYINT(1) DEFAULT 0")
-    private Boolean isActive = false;
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    /** Nhắc nhở gắn với sự kiện — xóa hết + tạo lại mỗi lần update (không merge) */
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<EventReminder> reminders;
-}
+    @Builder.Default
+    private List<EventReminder> reminders = new ArrayList<>();
 
+    // ── Lifecycle callbacks ────────────────────────────────────────────────
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // ── Enum ────────────────────────────────────────────────────────────────
+
+    public enum RecurrenceType {
+        YEARLY,         // lặp theo Dương lịch (VD: sinh nhật tính theo dương)
+        MONTHLY,
+        WEEKLY,
+        LUNAR_YEARLY    // lặp theo Âm lịch (ngày giỗ) — dùng lunarDay/lunarMonth
+    }
+}

@@ -1,58 +1,88 @@
 package com.demo.event.model.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-@Entity @Table(name = "relatives")
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
+
+@Entity
+@Table(name = "relatives")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Relative {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(length = 50)
+    @Column(name = "nickname", length = 50)
     private String nickname;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "group_type", nullable = false)
+    @Column(name = "group_type", nullable = false, length = 20)
     private GroupType groupType;
 
-    public enum GroupType {
-        GIA_DINH, VO_CHONG, CON_CAI, BAN_BE
-    }
-
     @Enumerated(EnumType.STRING)
+    @Column(name = "gender", length = 10)
     private Gender gender;
-    public enum Gender { MALE, FEMALE, OTHER }
 
     @Column(name = "date_of_birth")
-    private java.time.LocalDate dateOfBirth;
+    private LocalDate dateOfBirth;
 
-    @Column(length = 200)
+    @Column(name = "location", length = 200)
     private String location;
 
     @Column(name = "height_cm", precision = 5, scale = 1)
-    private java.math.BigDecimal heightCm;
+    private BigDecimal heightCm;
 
     @Column(name = "weight_kg", precision = 5, scale = 1)
-    private java.math.BigDecimal weightKg;
+    private BigDecimal weightKg;
 
-    @Column(columnDefinition = "TEXT")
-    private String hobbies; // JSON array string
+    /** JSON array string, VD: ["đọc sách","nấu ăn"] — parse ở Service */
+    @Column(name = "hobbies", columnDefinition = "TEXT")
+    private String hobbies;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
 
     @Column(name = "total_events")
+    @Builder.Default
     private Integer totalEvents = 0;
 
-    @OneToMany(mappedBy = "relative", cascade = CascadeType.ALL)
-    private java.util.List<Event> events;
-}
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public enum GroupType {
+        GIA_DINH, VO_CHONG, CON_CAI, BAN_BE
+    }
+
+    public enum Gender {
+        MALE, FEMALE, OTHER
+    }
+}

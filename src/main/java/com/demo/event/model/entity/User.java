@@ -1,91 +1,78 @@
 package com.demo.event.model.entity;
-import com.demo.event.model.converter.UserStatusConverter;
+
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-@Entity @Table(name = "users")
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
+@Entity
+@Table(name = "users")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "username", nullable = false, unique = true)
+    @Builder.Default
+    private String username = "";
+
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    /** Nullable — user đăng nhập qua Google không có password */
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    /** ID định danh từ Google (payload.getSubject()) — null nếu chưa liên kết Google */
+    @Column(name = "google_id", unique = true)
+    private String googleId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false, length = 10)
+    @Builder.Default
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(name = "status", nullable = false, length = 3)
+    @Builder.Default
+    private String status = "REG";
 
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(length = 10, columnDefinition = "VARCHAR(10) DEFAULT 'vi'")
+    @Column(name = "language")
+    @Builder.Default
     private String language = "vi";
 
-    @Column(name = "dark_mode", columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Column(name = "dark_mode")
+    @Builder.Default
     private Boolean darkMode = false;
 
     @Column(name = "total_events")
+    @Builder.Default
     private Integer totalEvents = 0;
 
     @Column(name = "total_relatives")
+    @Builder.Default
     private Integer totalRelatives = 0;
 
     @Column(name = "google_calendar_token", columnDefinition = "TEXT")
     private String googleCalendarToken;
 
-    @Column(name = "is_active", columnDefinition = "TINYINT(1) DEFAULT 1")
+    @Column(name = "is_active")
+    @Builder.Default
     private Boolean isActive = true;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = updatedAt = LocalDateTime.now();
-    }
-    @PreUpdate
-    protected void onUpdate() { updatedAt = LocalDateTime.now(); }
-    /**
-     * Danh sach role cua user.
-     * FetchType.EAGER: load roles ngay khi load User
-     * (can thiet cho Spring Security UserDetails).
-     * CascadeType.MERGE: khi save user thi merge roles.
-     */
-    @ManyToMany(fetch = FetchType.EAGER,
-            cascade = { CascadeType.MERGE })
-    @JoinTable(
-            name = "user_roles",
-            joinColumns        = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    @Builder.Default
-    private Set<Role> roles = new HashSet<>();
-    /** Helper: kiem tra user co role cu the khong. */
-    public boolean hasRole(Role.RoleName roleName) {
-        return roles.stream()
-                .anyMatch(r -> r.getName().equals(roleName.name()));
-    }
-
-    /**
-     * Trang thai tai khoan theo UserStatus enum.
-     * Luu ma 3 ky tu: REG, VRF, ACT, INA, LCK, BAN, DEL.
-     * Thay the TINYINT is_active cu.
-     */
-    @Convert(converter = UserStatusConverter.class)
-    @Column(nullable = false, length = 3, columnDefinition = "VARCHAR(3) DEFAULT 'REG'")
-    @Builder.Default
-    private UserStatus status = UserStatus.REGISTERED;
-
-    // ── Login tracking (Ch.20) ───────────────────────────────────────────
     @Column(name = "failed_login_count", nullable = false)
     @Builder.Default
     private Integer failedLoginCount = 0;
@@ -103,8 +90,40 @@ public class User {
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
 
-    @Column(name = "last_login_ip", length = 45)
+    @Column(name = "last_login_ip")
     private String lastLoginIp;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // ── Helper methods ─────────────────────────────────────────────────────
+
+    public boolean hasRole(String roleName) {
+        return roles.stream().anyMatch(r -> r.getName().equals(roleName));
+    }
 
     public boolean isCurrentlyLocked() {
         return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
@@ -112,20 +131,22 @@ public class User {
 
     public long getMinutesUntilUnlock() {
         if (!isCurrentlyLocked()) return 0;
-        return java.time.temporal.ChronoUnit.MINUTES
-                .between(LocalDateTime.now(), lockedUntil);
+        return java.time.Duration.between(LocalDateTime.now(), lockedUntil).toMinutes();
     }
 
-    /** Kiem tra status co phai active / hoat dong binh thuong. */
     public boolean isActive() {
-        return UserStatus.ACTIVE.equals(this.status);
+        return "ACT".equals(status);
     }
 
-    /** Kiem tra tai khoan co the dang nhap (ACT hoac VRF). */
     public boolean canLogin() {
-        return status == UserStatus.ACTIVE
-                || status == UserStatus.VERIFIED;
+        return "ACT".equals(status) || "VRF".equals(status);
     }
 
+    public boolean isGoogleUser() {
+        return AuthProvider.GOOGLE.equals(this.authProvider);
+    }
 
+    public enum AuthProvider {
+        LOCAL, GOOGLE
+    }
 }

@@ -3,6 +3,8 @@ package com.demo.event.model.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class EventResponse {
@@ -21,5 +23,15 @@ public class EventResponse {
     // Countdown
     private Long daysUntil;  // âm = đã qua, 0 = hôm nay, dương = còn x ngày
     // Danh sách reminder config
-    private java.util.List<ReminderResponse> reminders;
+    private List<ReminderResponse> reminders;
+
+        private List<ParticipantSummary> participants;
+
+    @Data
+    @Builder
+    public static class ParticipantSummary {
+        private Long id;
+      private String name;
+       private String avatarUrl;
+   }
 }

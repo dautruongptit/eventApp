@@ -2,54 +2,55 @@ package com.demo.event.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "event_reminders")
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class EventReminder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Quan hệ N-1 với Event (một sự kiện có nhiều reminder)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    // Nhắc trước bao nhiêu NGÀY (nullable: 7, 3, 1)
     @Column(name = "remind_days_before")
     private Integer remindDaysBefore;
 
-    // Nhắc trước bao nhiêu GIỜ (nullable: 1)
     @Column(name = "remind_hours_before")
     private Integer remindHoursBefore;
 
-    // Toggle bật/tắt từng reminder riêng lẻ
-    @Column(name = "is_enabled",
-            columnDefinition = "TINYINT(1) DEFAULT 1")
+    @Column(name = "is_enabled")
+    @Builder.Default
     private Boolean isEnabled = true;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
 
-    // Helper: tính thời điểm thực sự cần gửi thông báo
-    public LocalDateTime computeTriggerTime(java.time.LocalDate eventDate,
-                                            java.time.LocalTime eventTime) {
-        java.time.LocalDateTime base = eventTime != null
-                ? eventDate.atTime(eventTime)
-                : eventDate.atStartOfDay();
-        if (remindDaysBefore != null)
+    /** Tính thời điểm trigger thực sự dựa trên ngày/giờ sự kiện + mốc nhắc */
+    public LocalDateTime computeTriggerTime(LocalDate eventDate, LocalTime eventTime) {
+        LocalDateTime base = LocalDateTime.of(eventDate, eventTime != null ? eventTime : LocalTime.of(8, 0));
+        if (remindDaysBefore != null) {
             return base.minusDays(remindDaysBefore);
-        if (remindHoursBefore != null)
+        }
+        if (remindHoursBefore != null) {
             return base.minusHours(remindHoursBefore);
+        }
         return base;
     }
 }
-

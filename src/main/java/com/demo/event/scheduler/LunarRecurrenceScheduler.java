@@ -2,6 +2,7 @@ package com.demo.event.scheduler;
 
 import com.demo.event.model.entity.Event;
 import com.demo.event.repository.EventRepository;
+import com.demo.event.service.LunarCalendarService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

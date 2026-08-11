@@ -1,5 +1,6 @@
 package com.demo.event.model.dto.response;
 
+import com.demo.event.model.entity.LoginHistory;
 import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -15,4 +16,18 @@ public class LoginHistoryResponse {
     private Boolean       isSuccess;
     private String        failureReason;
     private LocalDateTime loginAt;
+
+    public static LoginHistoryResponse from(LoginHistory h) {
+        return LoginHistoryResponse.builder()
+            .id(h.getId())
+            .ipAddress(h.getIpAddress())
+            .deviceType(h.getDeviceType())
+            .os(h.getOs())
+            .browser(h.getBrowser())
+            .country(h.getCountry())
+            .isSuccess(h.getIsSuccess())
+            .failureReason(h.getFailureReason() != null ? h.getFailureReason().name() : null)
+            .loginAt(h.getLoginAt())
+            .build();
+    }
 }

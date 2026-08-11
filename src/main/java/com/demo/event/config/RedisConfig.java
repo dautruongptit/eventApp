@@ -54,8 +54,9 @@ public class RedisConfig implements CachingConfigurer {
     }
 
     // ── CacheManager ──────────────────────────────────────────────────────────
+    // KHONG @Override: CachingConfigurer.cacheManager() la method khong tham so;
+    // day la @Bean rieng nhan RedisConnectionFactory qua DI (Spring tu inject).
     @Bean
-    @Override
     public CacheManager cacheManager(RedisConnectionFactory factory) {
         RedisCacheConfiguration defaultCfg = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(10))

@@ -21,6 +21,7 @@ public class UserProfileResponse {
     private Integer totalEvents;
     private Integer totalRelatives;
     private Boolean isGoogleLinked;
+    private Boolean googleCalendarConnected;
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
 

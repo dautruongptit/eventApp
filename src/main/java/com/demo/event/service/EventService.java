@@ -7,18 +7,17 @@ import com.demo.event.model.dto.request.ReminderRequest;
 import com.demo.event.model.dto.response.EventResponse;
 import com.demo.event.model.dto.response.ReminderResponse;
 import com.demo.event.model.entity.*;
+import com.demo.event.repository.EventCategoryRepository;
 import com.demo.event.repository.EventParticipantRepository;
 import com.demo.event.repository.EventRepository;
 import com.demo.event.repository.RelativeRepository;
 import com.demo.event.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,6 +31,7 @@ public class EventService {
     private final RelativeRepository relativeRepo;
     private final UserRepository userRepo;
     private final EventParticipantRepository participantRepo;
+    private final EventCategoryRepository categoryRepo;
 
     // ── GET UPCOMING (màn hình Home – tối đa limit sự kiện) ─────────────
     public List<EventResponse> getUpcoming(Long userId, int limit) {
@@ -44,14 +44,12 @@ public class EventService {
                 .collect(Collectors.toList());
     }
 
-    // ── GET LIST (filter đa điều kiện) ──────────────────────────────────
-    public List<EventResponse> getEvents(Long userId, String typeStr,
+    // ── GET LIST (filter đa điều kiện — dùng categoryId) ────────────────
+    public List<EventResponse> getEvents(Long userId, Long categoryId,
                                          Long relativeId, Integer month, Integer year) {
-        Event.EventType type = (typeStr != null && !typeStr.isBlank())
-                ? Event.EventType.valueOf(typeStr) : null;
         LocalDate today = LocalDate.now();
         return eventRepo
-                .findFiltered(userId, type, relativeId, month, year)
+                .findFiltered(userId, categoryId, relativeId, month, year)
                 .stream()
                 .map(e -> toResponse(e, today))
                 .collect(Collectors.toList());
@@ -69,22 +67,14 @@ public class EventService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nguoi dung khong ton tai"));
 
-        // Resolve người thân (nullable – null = sự kiện bản thân)
-        Relative relative = null;
-        if (req.getParticipantIds() != null && !req.getParticipantIds().isEmpty()) {
-            relative = relativeRepo
-                    .findByIdAndUserId(req.getRelativeId(), userId)
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("Nguoi than khong ton tai"));
-
-
-        }
+        EventCategory category = resolveCategory(req.getCategoryId());
+        Relative relative = resolveRelative(req.getRelativeId(), userId);
 
         Event event = Event.builder()
                 .user(user)
                 .relative(relative)
                 .title(req.getTitle())
-                .eventType(Event.EventType.valueOf(req.getEventType()))
+                .category(category)
                 .eventDate(req.getEventDate())
                 .eventTime(req.getEventTime())
                 .isRecurring(Boolean.TRUE.equals(req.getIsRecurring()))
@@ -93,14 +83,18 @@ public class EventService {
                 .notes(req.getNotes())
                 .isActive(true)
                 .build();
-        saveParticipants(event, userId, req.getParticipantIds());
+
         // Map reminders từ request
         if (req.getReminders() != null && !req.getReminders().isEmpty()) {
-            List<EventReminder> reminders = buildReminders(req.getReminders(), event);
-            event.setReminders(reminders);
+            event.setReminders(buildReminders(req.getReminders(), event));
         }
 
         Event saved = eventRepo.save(event);
+
+        // Người thân khác cùng tham gia (event_participants)
+        if (req.getParticipantIds() != null && !req.getParticipantIds().isEmpty()) {
+            saveParticipants(saved, userId, req.getParticipantIds());
+        }
 
         // Cập nhật cache counter
         userRepo.incrementEventCount(userId);
@@ -115,18 +109,9 @@ public class EventService {
     public EventResponse update(Long id, Long userId, CreateEventRequest req) {
         Event event = findByIdAndOwner(id, userId);
 
-        // Resolve người thân mới (có thể thay đổi)
-        Relative newRelative = null;
-        if (req.getRelativeId() != null) {
-            newRelative = relativeRepo
-                    .findByIdAndUserId(req.getRelativeId(), userId)
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("Nguoi than khong ton tai"));
-        }
-
-        event.setRelative(newRelative);
+        event.setRelative(resolveRelative(req.getRelativeId(), userId));
         event.setTitle(req.getTitle());
-        event.setEventType(Event.EventType.valueOf(req.getEventType()));
+        event.setCategory(resolveCategory(req.getCategoryId()));
         event.setEventDate(req.getEventDate());
         event.setEventTime(req.getEventTime());
         event.setIsRecurring(Boolean.TRUE.equals(req.getIsRecurring()));
@@ -164,6 +149,18 @@ public class EventService {
         return e;
     }
 
+    private EventCategory resolveCategory(Long categoryId) {
+        return categoryRepo.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Danh muc su kien khong ton tai: " + categoryId));
+    }
+
+    private Relative resolveRelative(Long relativeId, Long userId) {
+        if (relativeId == null) return null;
+        return relativeRepo.findByIdAndUserId(relativeId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nguoi than khong ton tai"));
+    }
+
     /** Build danh sách EventReminder từ request list. */
     private List<EventReminder> buildReminders(
             List<ReminderRequest> requests, Event event) {
@@ -173,27 +170,28 @@ public class EventService {
                     .event(event)
                     .remindDaysBefore(r.getRemindDaysBefore())
                     .remindHoursBefore(r.getRemindHoursBefore())
-                    .isEnabled(Boolean.TRUE.equals(r.getIsEnabled()))
+                    .isEnabled(r.getIsEnabled() == null || r.getIsEnabled())
                     .build());
         }
         return result;
     }
 
-    /** Map Event entity -> EventResponse DTO. */
+    /** Map Event entity -> EventResponse DTO (kèm reminders + participants). */
     public EventResponse toResponse(Event e, LocalDate today) {
-        long daysUntil = ChronoUnit.DAYS.between(today, e.getEventDate());
         EventResponse response = EventResponse.from(e, today);
 
-        List<ReminderResponse> reminders = (e.getReminders() == null)
-                ? List.of()
-                : e.getReminders().stream()
-                .map(r -> ReminderResponse.builder()
-                        .id(r.getId())
-                        .remindDaysBefore(r.getRemindDaysBefore())
-                        .remindHoursBefore(r.getRemindHoursBefore())
-                        .isEnabled(r.getIsEnabled())
-                        .build())
-                .collect(Collectors.toList());
+        if (e.getReminders() != null && !e.getReminders().isEmpty()) {
+            List<ReminderResponse> reminders = e.getReminders().stream()
+                    .map(r -> ReminderResponse.builder()
+                            .id(r.getId())
+                            .remindDaysBefore(r.getRemindDaysBefore())
+                            .remindHoursBefore(r.getRemindHoursBefore())
+                            .isEnabled(r.getIsEnabled())
+                            .build())
+                    .collect(Collectors.toList());
+            response.setReminders(reminders);
+        }
+
         List<EventParticipant> participants = participantRepo.findByEventId(e.getId());
         if (!participants.isEmpty()) {
             response.setParticipants(participants.stream()
@@ -205,41 +203,20 @@ public class EventService {
                     .toList());
         }
         return response;
-
-        return EventResponse.builder()
-                .id(e.getId())
-                .title(e.getTitle())
-                .eventType(e.getEventType().name())
-                .eventDate(e.getEventDate())
-                .eventTime(e.getEventTime())
-                .isRecurring(e.getIsRecurring())
-                .recurrenceType(e.getRecurrenceType() != null
-                        ? e.getRecurrenceType().name() : null)
-                .notes(e.getNotes())
-                .relativeId(e.getRelative() != null ? e.getRelative().getId() : null)
-                .relativeName(e.getRelative() != null ? e.getRelative().getName() : null)
-                .relativeGroupType(e.getRelative() != null
-                        ? e.getRelative().getGroupType().name() : null)
-                .daysUntil(daysUntil)
-                .reminders(reminders)
-                .build();
     }
 
-
     private void saveParticipants(Event event, Long userId, List<Long> relativeIds) {
-       List<Relative> relatives = relativeRepo.findAllById(relativeIds).stream()
-           .filter(r -> r.getUser().getId().equals(userId))  // chi cho phep relative cua chinh user
-           .toList();
+        List<Relative> relatives = relativeRepo.findAllById(relativeIds).stream()
+                .filter(r -> r.getUser().getId().equals(userId))  // chi cho phep relative cua chinh user
+                .toList();
 
-       List<EventParticipant> participants = relatives.stream().map(r -> EventParticipant.builder()
-                .event(event)
-                .relative(r)
-               .build())
-           .toList();
+        List<EventParticipant> participants = relatives.stream()
+                .map(r -> EventParticipant.builder()
+                        .event(event)
+                        .relative(r)
+                        .build())
+                .toList();
 
         participantRepo.saveAll(participants);
     }
-
-
 }
-

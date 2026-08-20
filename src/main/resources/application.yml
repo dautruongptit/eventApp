@@ -75,18 +75,7 @@ spring:
       pool:
         size: ${SCHEDULER_POOL_SIZE:2}          # So thread cho @Scheduled
   # spring.data.redis #
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: ${REDIS_POOL_MAX:8}
-          max-idle:   ${REDIS_POOL_IDLE:4}
-          min-idle:   1
-          max-wait:   1000ms
+
 # ── APP CUSTOM PROPERTIES ───────────────────────────────────────
 app:
   # JWT — JWT_SECRET BAT BUOC, khong co gia tri mac dinh

@@ -28,7 +28,7 @@ import java.util.List;
 public class LunarRecurrenceScheduler {
 
     private final EventRepository        eventRepo;
-    private final LunarCalendarService    lunarCalendarService;
+    private final LunarCalendarService lunarCalendarService;
 
     // Chay luc 7:00 sang — TRUOC ReminderScheduler (8:00 sang)
     @Scheduled(cron = "0 0 7 * * *", zone = "Asia/Ho_Chi_Minh")

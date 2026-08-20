@@ -40,7 +40,6 @@ public class UserService {
                 .darkMode(u.getDarkMode())
                 .totalEvents(u.getTotalEvents())
                 .totalRelatives(u.getTotalRelatives())
-                .googleCalendarConnected(u.getGoogleCalendarToken() != null)
                 .createdAt(u.getCreatedAt())
                 .build();
     }

@@ -21,12 +21,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
 @EnableCaching
+@RequiredArgsConstructor
 public class RedisConfig implements CachingConfigurer {
+
+    private final RedisConnectionFactory connectionFactory;
 
     // ── Serializer ────────────────────────────────────────────────────────────
     private GenericJackson2JsonRedisSerializer jacksonSerializer() {
@@ -56,7 +60,7 @@ public class RedisConfig implements CachingConfigurer {
     // ── CacheManager ──────────────────────────────────────────────────────────
     @Bean
     @Override
-    public CacheManager cacheManager(RedisConnectionFactory factory) {
+    public CacheManager cacheManager() {
         RedisCacheConfiguration defaultCfg = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(10))
             .serializeKeysWith(
@@ -78,7 +82,7 @@ public class RedisConfig implements CachingConfigurer {
             "userProfile",    defaultCfg.entryTtl(Duration.ofMinutes(30))
         );
 
-        return RedisCacheManager.builder(factory)
+        return RedisCacheManager.builder(connectionFactory)
             .cacheDefaults(defaultCfg)
             .withInitialCacheConfigurations(cacheConfigs)
             .build();

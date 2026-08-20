@@ -45,9 +45,10 @@ public class AuthController {
     @Operation(summary = "Đăng nhập / đăng ký bằng Google",
                description = "Client gửi idToken lấy từ Google Sign-In SDK.")
     public ResponseEntity<BaseResponse<?>> loginWithGoogle(
-            @Valid @RequestBody GoogleLoginRequest req) {
+            @Valid @RequestBody GoogleLoginRequest req,
+            HttpServletRequest httpRequest) {
         return ResponseEntity.ok(
-            BaseResponse.success(googleAuthService.loginWithGoogle(req.getIdToken())));
+            BaseResponse.success(googleAuthService.loginWithGoogle(req.getIdToken(), httpRequest)));
     }
 
     @PostMapping("/refresh")

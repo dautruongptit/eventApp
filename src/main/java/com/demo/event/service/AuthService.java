@@ -63,10 +63,11 @@ public class AuthService {
             .orElseThrow(() -> new ResourceNotFoundException("Role", "ROLE_USER"));
 
         User user = User.builder()
+            .username(req.getEmail())  // username chua dung toi noi khac — dung email cho chac chan unique
             .fullName(req.getFullName())
             .email(req.getEmail())
             .passwordHash(passwordEncoder.encode(req.getPassword()))
-            .status("REG")
+            .status("ACT")  // Chua co ha tang xac minh email — kich hoat ngay khi register
             .roles(Set.of(userRole))
             .build();
 

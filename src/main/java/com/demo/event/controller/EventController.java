@@ -29,7 +29,7 @@ public class EventController {
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year) {
         return ResponseEntity.ok(
-            BaseResponse.success(eventService.getEvents(userId, String.valueOf(categoryId), relativeId, month, year)));
+            BaseResponse.success(eventService.getEvents(userId, categoryId, relativeId, month, year)));
     }
 
     @GetMapping("/upcoming")

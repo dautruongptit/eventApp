@@ -7,6 +7,7 @@ import com.demo.event.model.dto.request.ReminderRequest;
 import com.demo.event.model.dto.response.EventResponse;
 import com.demo.event.model.dto.response.ReminderResponse;
 import com.demo.event.model.entity.*;
+import com.demo.event.repository.EventCategoryRepository;
 import com.demo.event.repository.EventParticipantRepository;
 import com.demo.event.repository.EventRepository;
 import com.demo.event.repository.RelativeRepository;
@@ -32,6 +33,7 @@ public class EventService {
     private final RelativeRepository relativeRepo;
     private final UserRepository userRepo;
     private final EventParticipantRepository participantRepo;
+    private final EventCategoryRepository categoryRepo;
 
     // ── GET UPCOMING (màn hình Home – tối đa limit sự kiện) ─────────────
     public List<EventResponse> getUpcoming(Long userId, int limit) {
@@ -45,13 +47,11 @@ public class EventService {
     }
 
     // ── GET LIST (filter đa điều kiện) ──────────────────────────────────
-    public List<EventResponse> getEvents(Long userId, String typeStr,
+    public List<EventResponse> getEvents(Long userId, Long categoryId,
                                          Long relativeId, Integer month, Integer year) {
-        Event.EventType type = (typeStr != null && !typeStr.isBlank())
-                ? Event.EventType.valueOf(typeStr) : null;
         LocalDate today = LocalDate.now();
         return eventRepo
-                .findFiltered(userId, type, relativeId, month, year)
+                .findFiltered(userId, categoryId, relativeId, month, year)
                 .stream()
                 .map(e -> toResponse(e, today))
                 .collect(Collectors.toList());
@@ -69,6 +69,9 @@ public class EventService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nguoi dung khong ton tai"));
 
+        EventCategory category = categoryRepo.findById(req.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Danh muc su kien khong ton tai"));
+
         // Resolve người thân (nullable – null = sự kiện bản thân)
         Relative relative = null;
         if (req.getParticipantIds() != null && !req.getParticipantIds().isEmpty()) {
@@ -84,7 +87,7 @@ public class EventService {
                 .user(user)
                 .relative(relative)
                 .title(req.getTitle())
-                .eventType(Event.EventType.valueOf(req.getEventType()))
+                .category(category)
                 .eventDate(req.getEventDate())
                 .eventTime(req.getEventTime())
                 .isRecurring(Boolean.TRUE.equals(req.getIsRecurring()))
@@ -115,6 +118,9 @@ public class EventService {
     public EventResponse update(Long id, Long userId, CreateEventRequest req) {
         Event event = findByIdAndOwner(id, userId);
 
+        EventCategory category = categoryRepo.findById(req.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Danh muc su kien khong ton tai"));
+
         // Resolve người thân mới (có thể thay đổi)
         Relative newRelative = null;
         if (req.getRelativeId() != null) {
@@ -126,7 +132,7 @@ public class EventService {
 
         event.setRelative(newRelative);
         event.setTitle(req.getTitle());
-        event.setEventType(Event.EventType.valueOf(req.getEventType()));
+        event.setCategory(category);
         event.setEventDate(req.getEventDate());
         event.setEventTime(req.getEventTime());
         event.setIsRecurring(Boolean.TRUE.equals(req.getIsRecurring()));
@@ -182,7 +188,6 @@ public class EventService {
     /** Map Event entity -> EventResponse DTO. */
     public EventResponse toResponse(Event e, LocalDate today) {
         long daysUntil = ChronoUnit.DAYS.between(today, e.getEventDate());
-        EventResponse response = EventResponse.from(e, today);
 
         List<ReminderResponse> reminders = (e.getReminders() == null)
                 ? List.of()
@@ -194,22 +199,14 @@ public class EventService {
                         .isEnabled(r.getIsEnabled())
                         .build())
                 .collect(Collectors.toList());
-        List<EventParticipant> participants = participantRepo.findByEventId(e.getId());
-        if (!participants.isEmpty()) {
-            response.setParticipants(participants.stream()
-                    .map(ep -> EventResponse.ParticipantSummary.builder()
-                            .id(ep.getRelative().getId())
-                            .name(ep.getRelative().getName())
-                            .avatarUrl(ep.getRelative().getAvatarUrl())
-                            .build())
-                    .toList());
-        }
-        return response;
 
-        return EventResponse.builder()
+        EventResponse response = EventResponse.builder()
                 .id(e.getId())
                 .title(e.getTitle())
-                .eventType(e.getEventType().name())
+                .categoryId(e.getCategory().getId())
+                .categoryName(e.getCategory().getDisplayName())
+                .categoryIcon(e.getCategory().getIcon())
+                .categoryColor(e.getCategory().getColorHex())
                 .eventDate(e.getEventDate())
                 .eventTime(e.getEventTime())
                 .isRecurring(e.getIsRecurring())
@@ -223,6 +220,18 @@ public class EventService {
                 .daysUntil(daysUntil)
                 .reminders(reminders)
                 .build();
+
+        List<EventParticipant> participants = participantRepo.findByEventId(e.getId());
+        if (!participants.isEmpty()) {
+            response.setParticipants(participants.stream()
+                    .map(ep -> EventResponse.ParticipantSummary.builder()
+                            .id(ep.getRelative().getId())
+                            .name(ep.getRelative().getName())
+                            .avatarUrl(ep.getRelative().getAvatarUrl())
+                            .build())
+                    .toList());
+        }
+        return response;
     }
 
 

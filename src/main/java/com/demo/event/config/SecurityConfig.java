@@ -1,6 +1,8 @@
 package com.demo.event.config;
 
 import com.demo.event.security.CustomUserDetailsService;
+import com.demo.event.security.JsonAccessDeniedHandler;
+import com.demo.event.security.JsonAuthenticationEntryPoint;
 import com.demo.event.security.JwtAuthFilter;
 import com.demo.event.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService userDetailsService;
+    private final JsonAuthenticationEntryPoint authenticationEntryPoint;
+    private final JsonAccessDeniedHandler accessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -65,6 +69,9 @@ public class SecurityConfig {
                         "/v3/api-docs/**").permitAll()
 
                 .anyRequest().authenticated())
+            .exceptionHandling(eh -> eh
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

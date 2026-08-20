@@ -10,7 +10,10 @@ import java.util.List;
 public class EventResponse {
     private Long id;
     private String title;
-    private String eventType;
+    private Long categoryId;
+    private String categoryName;
+    private String categoryIcon;
+    private String categoryColor;
     private java.time.LocalDate eventDate;
     private java.time.LocalTime eventTime;
     private Boolean isRecurring;

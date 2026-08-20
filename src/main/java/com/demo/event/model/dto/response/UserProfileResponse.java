@@ -21,6 +21,7 @@ public class UserProfileResponse {
     private Integer totalEvents;
     private Integer totalRelatives;
     private Boolean isGoogleLinked;
+    private Boolean googleCalendarConnected;
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
 
@@ -37,6 +38,7 @@ public class UserProfileResponse {
             .totalEvents(u.getTotalEvents())
             .totalRelatives(u.getTotalRelatives())
             .isGoogleLinked(u.getGoogleId() != null)
+            .googleCalendarConnected(u.getGoogleCalendarToken() != null)
             .lastLoginAt(u.getLastLoginAt())
             .createdAt(u.getCreatedAt())
             .build();

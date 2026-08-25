@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -43,10 +44,13 @@ public class GoogleAuthService {
 
     @Transactional
     public AuthResponse loginWithGoogle(String idToken, HttpServletRequest httpRequest) {
+        log.info("[GoogleAuth] Login attempt voi Google idToken");
+
         GoogleIdToken.Payload payload = verifyIdToken(idToken);
 
         // Khong tin claim email neu Google chua tu xac thuc no — tranh gia mao email
         if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+            log.warn("[GoogleAuth] Login that bai — email Google chua xac thuc: email={}", payload.getEmail());
             throw new UnauthorizedException("Email Google chua duoc xac thuc");
         }
 
@@ -54,6 +58,7 @@ public class GoogleAuthService {
         String email     = payload.getEmail();
         String fullName  = (String) payload.get("name");
         String avatarUrl = (String) payload.get("picture");
+        log.debug("[GoogleAuth] idToken hop le: email={} googleId={}", email, googleId);
 
         User user = userRepo.findByGoogleId(googleId).orElse(null);
         if (user == null) {
@@ -61,19 +66,23 @@ public class GoogleAuthService {
             // bat ky ai co Google account trung email se chiem duoc tai khoan do ma
             // khong can biet mat khau (account takeover). Chi cho phep tao moi.
             if (userRepo.findByEmail(email).isPresent()) {
+                log.warn("[GoogleAuth] Login that bai — email da dang ky bang mat khau: email={}", email);
                 throw new UnauthorizedException(
                     "Email nay da duoc dang ky bang mat khau. Vui long dang nhap bang email/mat khau.");
             }
             user = createGoogleUser(googleId, email, fullName, avatarUrl);
+            log.info("[GoogleAuth] Tao user moi tu Google: userId={} email={}", user.getId(), email);
         }
 
         if (!user.canLogin()) {
+            log.warn("[GoogleAuth] Login that bai — tai khoan chua kich hoat/bi khoa: userId={}", user.getId());
             throw new UnauthorizedException("Tai khoan chua duoc kich hoat hoac da bi khoa");
         }
 
         String ip = DeviceParser.getClientIp(httpRequest);
         handleSuccessLogin(user, ip);
         saveLoginHistory(user, ip, httpRequest.getHeader("User-Agent"));
+        log.info("[GoogleAuth] Login thanh cong: userId={} ip={}", user.getId(), ip);
 
         String accessToken  = jwtTokenProvider.generateAccessToken(user.getId(), user.getRoles());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
@@ -88,6 +97,7 @@ public class GoogleAuthService {
         try {
             GoogleIdToken token = googleIdTokenVerifier.verify(idToken);
             if (token == null) {
+                log.warn("[GoogleAuth] idToken khong hop le hoac da het han (verify tra ve null)");
                 throw new UnauthorizedException("idToken Google khong hop le hoac da het han");
             }
             return token.getPayload();
@@ -110,7 +120,10 @@ public class GoogleAuthService {
             .authProvider(User.AuthProvider.GOOGLE)
             .status("ACT")            // email da duoc Google xac thuc san
             .avatarUrl(avatarUrl)
-            .roles(Set.of(userRole))
+            // Set.of() tra ve collection immutable — Hibernate can .clear() collection
+            // nay khi merge entity (vd handleSuccessLogin save lai ngay sau khi tao),
+            // gay UnsupportedOperationException. Phai bọc bang collection mutable.
+            .roles(new HashSet<>(Set.of(userRole)))
             .build();
         return userRepo.save(user);
     }

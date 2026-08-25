@@ -5,12 +5,14 @@ import com.demo.event.model.dto.response.UserProfileResponse;
 import com.demo.event.model.entity.User;
 import com.demo.event.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,6 +25,7 @@ public class UserService {
      * createdAt giam dan (moi nhat truoc).
      */
     public Page<UserProfileResponse> getAllUsers(int page, int size) {
+        log.debug("[User] Admin lay danh sach user: page={} size={}", page, size);
         PageRequest pageable = PageRequest.of(
                 page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 

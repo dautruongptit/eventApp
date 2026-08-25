@@ -3,10 +3,12 @@ package com.demo.event.service;
 import com.demo.event.exception.BadRequestException;
 import com.demo.event.model.dto.response.LunarDateResponse;
 import com.demo.event.util.LunarCalendarConverter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 
+@Slf4j
 @Service
 public class LunarCalendarService {
 
@@ -38,6 +40,9 @@ public class LunarCalendarService {
         String displayText = String.format("%d/%d%s Âm lịch",
             lunarDay, lunarMonth, isLeap ? " (nhuận)" : "");
 
+        log.debug("[Lunar] Solar->Lunar: {} -> {}/{}/{}{}",
+            solarDate, lunarDay, lunarMonth, lunarYear, isLeap ? " (nhuan)" : "");
+
         return LunarDateResponse.builder()
             .solarDay(solarDate.getDayOfMonth())
             .solarMonth(solarDate.getMonthValue())
@@ -61,11 +66,15 @@ public class LunarCalendarService {
             lunarDay, lunarMonth, lunarYear, isLeapMonth ? 1 : 0);
 
         if (solar[0] == 0) {
+            log.warn("[Lunar] Lunar->Solar that bai — nam {} khong co thang nhuan {}", lunarYear, lunarMonth);
             throw new BadRequestException(
                 "Năm " + lunarYear + " không có tháng nhuận " + lunarMonth + " — vui lòng kiểm tra lại");
         }
 
-        return LocalDate.of(solar[2], solar[1], solar[0]);
+        LocalDate result = LocalDate.of(solar[2], solar[1], solar[0]);
+        log.debug("[Lunar] Lunar->Solar: {}/{}/{}{} -> {}",
+            lunarDay, lunarMonth, lunarYear, isLeapMonth ? " (nhuan)" : "", result);
+        return result;
     }
 
     /**

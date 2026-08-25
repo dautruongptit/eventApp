@@ -6,12 +6,14 @@ import com.demo.event.model.entity.Notification;
 import com.demo.event.repository.NotificationRepository;
 import com.demo.event.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -40,17 +42,23 @@ public class NotificationService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Thong bao khong ton tai: " + id));
 
-        if (!n.getUser().getId().equals(userId))
+        if (!n.getUser().getId().equals(userId)) {
+            log.warn("[Notification] Truy cap bi tu choi: notificationId={} ownerUserId={} requestUserId={}",
+                id, n.getUser().getId(), userId);
             throw new ForbiddenException("Ban khong co quyen truy cap thong bao nay");
+        }
 
         n.setIsRead(true);
-        return toResponse(notifRepo.save(n));
+        NotificationResponse response = toResponse(notifRepo.save(n));
+        log.debug("[Notification] Danh dau da doc: notificationId={} userId={}", id, userId);
+        return response;
     }
 
     // ── MARK ALL AS READ ─────────────────────────────────────────────────
     @Transactional
     public void markAllAsRead(Long userId) {
         notifRepo.markAllAsRead(userId);
+        log.info("[Notification] Danh dau tat ca da doc: userId={}", userId);
     }
 
     // ── PRIVATE HELPERS ─────────────────────────────────────────────────

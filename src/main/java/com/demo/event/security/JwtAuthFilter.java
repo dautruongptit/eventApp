@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,6 +19,7 @@ import java.util.List;
  * de tranh circular dependency (SecurityConfig can JwtTokenProvider,
  * JwtTokenProvider khong duoc phep phu thuoc nguoc lai SecurityConfig).
  */
+@Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -56,6 +58,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("[JwtAuthFilter] Xac thuc thanh cong: userId={} roles={} uri={}",
+                    userId, roles, request.getRequestURI());
+            } else {
+                log.debug("[JwtAuthFilter] Token khong hop le hoac sai loai: uri={}", request.getRequestURI());
             }
         }
 

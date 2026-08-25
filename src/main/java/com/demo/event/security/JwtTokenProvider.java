@@ -33,7 +33,7 @@ public class JwtTokenProvider {
     public String generateAccessToken(Long userId, Set<Role> roles) {
         List<String> roleNames = roles.stream().map(Role::getName).collect(Collectors.toList());
 
-        return Jwts.builder()
+        String token = Jwts.builder()
             .subject(String.valueOf(userId))
             .claim("roles", roleNames)
             .claim("type", "access")
@@ -41,22 +41,29 @@ public class JwtTokenProvider {
             .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
             .signWith(getSigningKey())
             .compact();
+        log.debug("[JWT] Tao access token: userId={} roles={} expiresInMs={}", userId, roleNames, jwtExpiration);
+        return token;
     }
 
     public String generateRefreshToken(Long userId) {
-        return Jwts.builder()
+        String token = Jwts.builder()
             .subject(String.valueOf(userId))
             .claim("type", "refresh")
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + refreshExpiration))
             .signWith(getSigningKey())
             .compact();
+        log.debug("[JWT] Tao refresh token: userId={} expiresInMs={}", userId, refreshExpiration);
+        return token;
     }
 
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
             return true;
+        } catch (ExpiredJwtException e) {
+            log.warn("[JWT] Token da het han: subject={}", e.getClaims().getSubject());
+            return false;
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("[JWT] Token khong hop le: {}", e.getMessage());
             return false;

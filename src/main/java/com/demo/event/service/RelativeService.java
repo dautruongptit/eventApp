@@ -12,6 +12,7 @@ import com.demo.event.repository.RelativeRepository;
 import com.demo.event.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -95,6 +97,8 @@ public class RelativeService {
 
         relativeRepo.save(relative);
         userRepo.incrementRelativeCount(userId);
+        log.info("[Relative] Tao thanh cong: relativeId={} userId={} name={}",
+            relative.getId(), userId, relative.getName());
         return RelativeResponse.from(relative);
     }
 
@@ -120,7 +124,9 @@ public class RelativeService {
         relative.setHobbies(toHobbiesJson(req.getHobbies()));
         relative.setAvatarUrl(req.getAvatarUrl());
 
-        return RelativeResponse.from(relativeRepo.save(relative));
+        RelativeResponse response = RelativeResponse.from(relativeRepo.save(relative));
+        log.info("[Relative] Cap nhat thanh cong: relativeId={} userId={}", id, userId);
+        return response;
     }
 
     // ── DELETE — evict tất cả liên quan ──────────────────────────────────────
@@ -136,6 +142,7 @@ public class RelativeService {
             .orElseThrow(() -> new ResourceNotFoundException("Relative", id));
         relativeRepo.delete(relative);
         userRepo.decrementRelativeCount(userId);
+        log.info("[Relative] Xoa thanh cong: relativeId={} userId={}", id, userId);
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -145,6 +152,8 @@ public class RelativeService {
         try {
             return objectMapper.writeValueAsString(hobbies);
         } catch (Exception e) {
+            log.warn("[Relative] Khong the serialize hobbies thanh JSON: hobbies={} error={}",
+                hobbies, e.getMessage());
             return null;
         }
     }

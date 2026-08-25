@@ -34,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -55,7 +56,10 @@ public class AuthService {
     // ── REGISTER ──────────────────────────────────────────────────────────────
     @Transactional
     public AuthResponse register(RegisterRequest req) {
+        log.info("[Auth] Dang ky moi: email={}", req.getEmail());
+
         if (userRepo.existsByEmail(req.getEmail())) {
+            log.warn("[Auth] Dang ky that bai — email da ton tai: email={}", req.getEmail());
             throw new BadRequestException("Email đã được sử dụng");
         }
 
@@ -68,10 +72,14 @@ public class AuthService {
             .email(req.getEmail())
             .passwordHash(passwordEncoder.encode(req.getPassword()))
             .status("ACT")  // Chua co ha tang xac minh email — kich hoat ngay khi register
-            .roles(Set.of(userRole))
+            // HashSet (khong dung Set.of()) — Hibernate can goi .clear() tren
+            // collection nay khi merge/update entity ve sau; Set.of() la immutable
+            // se nem UnsupportedOperationException luc do.
+            .roles(new HashSet<>(Set.of(userRole)))
             .build();
 
         userRepo.save(user);
+        log.info("[Auth] Dang ky thanh cong: userId={} email={}", user.getId(), user.getEmail());
 
         String accessToken  = jwtTokenProvider.generateAccessToken(user.getId(), user.getRoles());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
@@ -85,18 +93,26 @@ public class AuthService {
     // ── LOGIN ─────────────────────────────────────────────────────────────────
     @Transactional
     public AuthResponse login(LoginRequest req, HttpServletRequest httpRequest) {
+        log.info("[Auth] Login attempt: email={}", req.getEmail());
+
         User user = userRepo.findByEmail(req.getEmail())
-            .orElseThrow(() -> new UnauthorizedException("Email hoặc mật khẩu không đúng"));
+            .orElseThrow(() -> {
+                log.warn("[Auth] Login that bai — email khong ton tai: email={}", req.getEmail());
+                return new UnauthorizedException("Email hoặc mật khẩu không đúng");
+            });
 
         String ip = DeviceParser.getClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
         if (!user.canLogin()) {
+            log.warn("[Auth] Login that bai — tai khoan chua kich hoat: userId={}", user.getId());
             saveLoginHistory(user, ip, userAgent, false, LoginHistory.FailureReason.ACCOUNT_INACTIVE);
             throw new UnauthorizedException("Tài khoản chưa được kích hoạt");
         }
 
         if (user.isCurrentlyLocked()) {
+            log.warn("[Auth] Login that bai — tai khoan dang bi khoa: userId={} unlockInMinutes={}",
+                user.getId(), user.getMinutesUntilUnlock());
             saveLoginHistory(user, ip, userAgent, false, LoginHistory.FailureReason.ACCOUNT_LOCKED);
             throw new UnauthorizedException(
                 "Tài khoản đang bị khóa, thử lại sau " + user.getMinutesUntilUnlock() + " phút");
@@ -106,11 +122,14 @@ public class AuthService {
                 || !passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
             handleFailedLogin(user);
             saveLoginHistory(user, ip, userAgent, false, LoginHistory.FailureReason.WRONG_PASSWORD);
+            log.warn("[Auth] Login that bai — sai mat khau: userId={} failedCount={}",
+                user.getId(), user.getFailedLoginCount());
             throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
         handleSuccessLogin(user, ip);
         saveLoginHistory(user, ip, userAgent, true, null);
+        log.info("[Auth] Login thanh cong: userId={} ip={}", user.getId(), ip);
 
         String accessToken  = jwtTokenProvider.generateAccessToken(user.getId(), user.getRoles());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
@@ -125,6 +144,7 @@ public class AuthService {
     public AuthResponse refreshToken(String refreshToken) {
         if (!jwtTokenProvider.validateToken(refreshToken)
                 || !"refresh".equals(jwtTokenProvider.getTokenType(refreshToken))) {
+            log.warn("[Auth] Refresh token khong hop le hoac sai loai token");
             throw new UnauthorizedException("Refresh token không hợp lệ hoặc đã hết hạn");
         }
 
@@ -134,6 +154,7 @@ public class AuthService {
 
         String newAccessToken  = jwtTokenProvider.generateAccessToken(user.getId(), user.getRoles());
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+        log.info("[Auth] Refresh token thanh cong: userId={}", userId);
 
         return AuthResponse.builder()
             .accessToken(newAccessToken).refreshToken(newRefreshToken)
@@ -181,6 +202,7 @@ public class AuthService {
             Files.copy(file.getInputStream(), path);
             user.setAvatarUrl("/uploads/avatars/" + filename);
         } catch (IOException e) {
+            log.error("[Auth] Upload avatar that bai: userId={}", userId, e);
             throw new BadRequestException("Không thể upload avatar: " + e.getMessage());
         }
 
@@ -218,6 +240,7 @@ public class AuthService {
             .orElseThrow(() -> new ResourceNotFoundException("User", targetUserId));
         user.setStatus("INA");
         userRepo.save(user);
+        log.info("[Auth] Admin khoa tai khoan: targetUserId={} adminUserId={}", targetUserId, adminUserId);
     }
 
     @Transactional
@@ -228,6 +251,7 @@ public class AuthService {
             .orElseThrow(() -> new ResourceNotFoundException("Role", "ROLE_ADMIN"));
         user.getRoles().add(adminRole);
         userRepo.save(user);
+        log.info("[Auth] Cap quyen admin: targetUserId={}", targetUserId);
     }
 
     // ── HELPERS — Login tracking ─────────────────────────────────────────────
@@ -237,6 +261,8 @@ public class AuthService {
         user.setLastFailedAt(LocalDateTime.now());
         if (user.getFailedLoginCount() >= MAX_FAILED_ATTEMPTS) {
             user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_DURATION_MINUTES));
+            log.warn("[Auth] Tai khoan bi khoa do dang nhap sai qua {} lan: userId={}",
+                MAX_FAILED_ATTEMPTS, user.getId());
         }
         userRepo.save(user);
     }

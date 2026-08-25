@@ -13,6 +13,7 @@ import com.demo.event.repository.EventRepository;
 import com.demo.event.repository.RelativeRepository;
 import com.demo.event.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -66,6 +68,9 @@ public class EventService {
     // ── CREATE ───────────────────────────────────────────────────────────
     @Transactional
     public EventResponse create(Long userId, CreateEventRequest req) {
+        log.debug("[Event] Create request: userId={} title={} categoryId={}",
+            userId, req.getTitle(), req.getCategoryId());
+
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nguoi dung khong ton tai"));
 
@@ -74,13 +79,11 @@ public class EventService {
 
         // Resolve người thân (nullable – null = sự kiện bản thân)
         Relative relative = null;
-        if (req.getParticipantIds() != null && !req.getParticipantIds().isEmpty()) {
+        if (req.getRelativeId() != null) {
             relative = relativeRepo
                     .findByIdAndUserId(req.getRelativeId(), userId)
                     .orElseThrow(() ->
                             new ResourceNotFoundException("Nguoi than khong ton tai"));
-
-
         }
 
         Event event = Event.builder()
@@ -110,12 +113,15 @@ public class EventService {
         if (relative != null)
             relativeRepo.incrementEventCount(relative.getId());
 
+        log.info("[Event] Tao thanh cong: eventId={} userId={} title={}",
+            saved.getId(), userId, saved.getTitle());
         return toResponse(saved, LocalDate.now());
     }
 
     // ── UPDATE ───────────────────────────────────────────────────────────
     @Transactional
     public EventResponse update(Long id, Long userId, CreateEventRequest req) {
+        log.debug("[Event] Update request: eventId={} userId={}", id, userId);
         Event event = findByIdAndOwner(id, userId);
 
         EventCategory category = categoryRepo.findById(req.getCategoryId())
@@ -146,7 +152,9 @@ public class EventService {
             event.getReminders().addAll(buildReminders(req.getReminders(), event));
         }
 
-        return toResponse(eventRepo.save(event), LocalDate.now());
+        EventResponse response = toResponse(eventRepo.save(event), LocalDate.now());
+        log.info("[Event] Cap nhat thanh cong: eventId={} userId={}", id, userId);
+        return response;
     }
 
     // ── DELETE (soft delete: isActive = false) ───────────────────────────
@@ -158,6 +166,7 @@ public class EventService {
         userRepo.decrementEventCount(userId);
         if (event.getRelative() != null)
             relativeRepo.decrementRelativeEventCount(event.getRelative().getId());
+        log.info("[Event] Xoa (soft delete) thanh cong: eventId={} userId={}", id, userId);
     }
 
     // ── PRIVATE HELPERS ─────────────────────────────────────────────────
@@ -165,8 +174,11 @@ public class EventService {
         Event e = eventRepo.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Su kien khong ton tai: " + id));
-        if (!e.getUser().getId().equals(userId))
+        if (!e.getUser().getId().equals(userId)) {
+            log.warn("[Event] Truy cap bi tu choi: eventId={} ownerUserId={} requestUserId={}",
+                id, e.getUser().getId(), userId);
             throw new ForbiddenException("Ban khong co quyen truy cap su kien nay");
+        }
         return e;
     }
 
@@ -236,6 +248,7 @@ public class EventService {
 
 
     private void saveParticipants(Event event, Long userId, List<Long> relativeIds) {
+       if (relativeIds == null || relativeIds.isEmpty()) return;
        List<Relative> relatives = relativeRepo.findAllById(relativeIds).stream()
            .filter(r -> r.getUser().getId().equals(userId))  // chi cho phep relative cua chinh user
            .toList();

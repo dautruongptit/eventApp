@@ -46,7 +46,15 @@ public class ReminderScheduler {
             Event event = reminder.getEvent();
             LocalDateTime trigger = reminder.computeTriggerTime(event.getEventDate(), event.getEventTime());
 
-            if (!isDue(trigger, now, reminder.getNotifiedAt())) {
+            boolean lastNotificationRead = false;
+            if (reminder.getRepeatIntervalMinutes() != null && reminder.getNotifiedAt() != null) {
+                lastNotificationRead = notifRepo.findFirstByReminderIdOrderBySentAtDesc(reminder.getId())
+                    .map(Notification::getIsRead)
+                    .orElse(false);
+            }
+
+            if (!isDue(trigger, now, reminder.getNotifiedAt(),
+                    reminder.getRepeatIntervalMinutes(), lastNotificationRead)) {
                 continue;
             }
 
@@ -65,15 +73,32 @@ public class ReminderScheduler {
     }
 
     /**
-     * Nhắc nhở đến hạn và chưa được báo cho đúng lần trigger này.
+     * Nhắc nhở đến hạn và cần bắn (lần đầu, hoặc lặp lại đúng chu kỳ).
+     *
      * notifiedAt cũ hơn trigger hiện tại (VD: sự kiện lặp âm lịch đã sang
-     * kỳ mới) vẫn tính là chưa báo — cho phép bắn lại.
+     * kỳ mới) luôn tính là chưa báo cho lần trigger này — bắn ngay, không
+     * quan tâm repeatIntervalMinutes/lastNotificationRead (thuộc chu kỳ cũ).
+     *
+     * Nếu đã bắn ít nhất 1 lần cho đúng chu kỳ hiện tại:
+     *   - repeatIntervalMinutes == null -> nhắc 1 lần duy nhất, không bắn lại.
+     *   - ngược lại -> chỉ bắn lại khi CHƯA đọc thông báo lần trước và đã
+     *     qua đủ repeatIntervalMinutes kể từ lần bắn gần nhất.
      */
-    static boolean isDue(LocalDateTime trigger, LocalDateTime now, LocalDateTime notifiedAt) {
+    static boolean isDue(LocalDateTime trigger, LocalDateTime now, LocalDateTime notifiedAt,
+                          Integer repeatIntervalMinutes, boolean lastNotificationRead) {
         if (trigger.isAfter(now)) {
             return false;
         }
-        return notifiedAt == null || notifiedAt.isBefore(trigger);
+        if (notifiedAt == null || notifiedAt.isBefore(trigger)) {
+            return true;
+        }
+        if (repeatIntervalMinutes == null) {
+            return false;
+        }
+        if (lastNotificationRead) {
+            return false;
+        }
+        return !notifiedAt.plusMinutes(repeatIntervalMinutes).isAfter(now);
     }
 
     private void fireReminder(EventReminder reminder, Event event, LocalDateTime now) {
@@ -83,6 +108,7 @@ public class ReminderScheduler {
         Notification notif = Notification.builder()
             .user(event.getUser())
             .event(event)
+            .reminder(reminder)
             .title(title)
             .body(body)
             .isRead(false)

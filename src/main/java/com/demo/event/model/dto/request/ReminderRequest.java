@@ -9,5 +9,9 @@ public class ReminderRequest {
     private Integer remindDaysBefore;
     private Integer remindHoursBefore;
 
+    /** Tuỳ chọn: sau lần bắn đầu tiên, tự bắn lại mỗi N phút cho tới khi
+     * người dùng đọc thông báo (VD: nhắc uống thuốc mỗi 30 phút). */
+    private Integer repeatIntervalMinutes;
+
     private Boolean isEnabled;
 }

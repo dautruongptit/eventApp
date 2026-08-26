@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,6 +57,10 @@ class ReminderSchedulerTest {
             .build();
     }
 
+    private Notification notifWithReadStatus(boolean read) {
+        return Notification.builder().isRead(read).build();
+    }
+
     // ── isDue: logic quyết định có bắn nhắc nhở hay không ──────────────────
 
     @Test
@@ -63,7 +68,7 @@ class ReminderSchedulerTest {
         LocalDateTime now = LocalDateTime.of(2026, 8, 26, 10, 0);
         LocalDateTime trigger = now.minusMinutes(1);
 
-        assertTrue(ReminderScheduler.isDue(trigger, now, null));
+        assertTrue(ReminderScheduler.isDue(trigger, now, null, null, false));
     }
 
     @Test
@@ -71,7 +76,7 @@ class ReminderSchedulerTest {
         LocalDateTime now = LocalDateTime.of(2026, 8, 26, 10, 0);
         LocalDateTime trigger = now.plusMinutes(1);
 
-        assertFalse(ReminderScheduler.isDue(trigger, now, null));
+        assertFalse(ReminderScheduler.isDue(trigger, now, null, null, false));
     }
 
     @Test
@@ -80,7 +85,7 @@ class ReminderSchedulerTest {
         LocalDateTime trigger = now.minusMinutes(5);
         LocalDateTime notifiedAt = trigger.plusMinutes(1); // đã gửi ngay sau khi đến hạn
 
-        assertFalse(ReminderScheduler.isDue(trigger, now, notifiedAt));
+        assertFalse(ReminderScheduler.isDue(trigger, now, notifiedAt, null, false));
     }
 
     @Test
@@ -91,7 +96,34 @@ class ReminderSchedulerTest {
         LocalDateTime trigger = now.minusMinutes(1);
         LocalDateTime notifiedAt = trigger.minusYears(1);
 
-        assertTrue(ReminderScheduler.isDue(trigger, now, notifiedAt));
+        assertTrue(ReminderScheduler.isDue(trigger, now, notifiedAt, null, false));
+    }
+
+    @Test
+    void isDue_returnsTrue_whenRepeatIntervalElapsedAndUnread() {
+        LocalDateTime now = LocalDateTime.of(2026, 8, 26, 13, 0);
+        LocalDateTime trigger = now.minusHours(1);
+        LocalDateTime notifiedAt = now.minusMinutes(30); // lần bắn trước cách đây đúng 30p
+
+        assertTrue(ReminderScheduler.isDue(trigger, now, notifiedAt, 30, false));
+    }
+
+    @Test
+    void isDue_returnsFalse_whenRepeatIntervalNotYetElapsed() {
+        LocalDateTime now = LocalDateTime.of(2026, 8, 26, 13, 0);
+        LocalDateTime trigger = now.minusHours(1);
+        LocalDateTime notifiedAt = now.minusMinutes(10); // mới bắn cách đây 10p, chưa đủ 30p
+
+        assertFalse(ReminderScheduler.isDue(trigger, now, notifiedAt, 30, false));
+    }
+
+    @Test
+    void isDue_returnsFalse_whenRepeatingReminderAcknowledged() {
+        LocalDateTime now = LocalDateTime.of(2026, 8, 26, 13, 0);
+        LocalDateTime trigger = now.minusHours(1);
+        LocalDateTime notifiedAt = now.minusMinutes(30);
+
+        assertFalse(ReminderScheduler.isDue(trigger, now, notifiedAt, 30, true));
     }
 
     // ── checkReminders: điều phối toàn bộ luồng ────────────────────────────
@@ -139,6 +171,52 @@ class ReminderSchedulerTest {
         scheduler.checkReminders();
 
         verify(notifRepo, never()).save(any());
+        verify(fcmService, never()).sendToUser(any(), anyString(), anyString(), any());
+        verify(reminderRepo, never()).save(any());
+    }
+
+    @Test
+    void checkReminders_repeatingReminderUnreadAndIntervalElapsed_firesAgain() {
+        Event event = eventOn(LocalDate.now(), LocalTime.now().minusHours(2));
+        EventReminder reminder = EventReminder.builder()
+            .id(7L)
+            .event(event)
+            .remindHoursBefore(2) // trigger = eventTime - 2h = đúng bây giờ (đã qua từ lâu)
+            .repeatIntervalMinutes(30)
+            .isEnabled(true)
+            .notifiedAt(LocalDateTime.now().minusMinutes(31)) // đã bắn cách đây > 30p
+            .build();
+
+        when(reminderRepo.findDueCandidates(any())).thenReturn(List.of(reminder));
+        when(notifRepo.findFirstByReminderIdOrderBySentAtDesc(7L))
+            .thenReturn(Optional.of(notifWithReadStatus(false)));
+        Cache cache = mock(Cache.class);
+        when(cacheManager.getCache("unreadCount")).thenReturn(cache);
+
+        scheduler.checkReminders();
+
+        verify(fcmService).sendToUser(eq(1L), anyString(), anyString(), any(Map.class));
+        verify(reminderRepo).save(argThat((EventReminder r) -> r.getNotifiedAt() != null));
+    }
+
+    @Test
+    void checkReminders_repeatingReminderAcknowledged_doesNotFireAgain() {
+        Event event = eventOn(LocalDate.now(), LocalTime.now().minusHours(2));
+        EventReminder reminder = EventReminder.builder()
+            .id(8L)
+            .event(event)
+            .remindHoursBefore(2)
+            .repeatIntervalMinutes(30)
+            .isEnabled(true)
+            .notifiedAt(LocalDateTime.now().minusMinutes(31))
+            .build();
+
+        when(reminderRepo.findDueCandidates(any())).thenReturn(List.of(reminder));
+        when(notifRepo.findFirstByReminderIdOrderBySentAtDesc(8L))
+            .thenReturn(Optional.of(notifWithReadStatus(true)));
+
+        scheduler.checkReminders();
+
         verify(fcmService, never()).sendToUser(any(), anyString(), anyString(), any());
         verify(reminderRepo, never()).save(any());
     }

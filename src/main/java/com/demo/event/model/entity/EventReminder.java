@@ -39,6 +39,11 @@ public class EventReminder {
     @Column(name = "notified_at")
     private LocalDateTime notifiedAt;
 
+    /** Nếu có giá trị: sau lần bắn đầu tiên, tự bắn lại mỗi N phút cho tới khi
+     * người dùng đọc thông báo ở chuông (VD: nhắc uống thuốc mỗi 30 phút). */
+    @Column(name = "repeat_interval_minutes")
+    private Integer repeatIntervalMinutes;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

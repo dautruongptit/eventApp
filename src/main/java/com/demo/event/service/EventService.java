@@ -236,6 +236,7 @@ public class EventService {
                     .event(event)
                     .remindDaysBefore(r.getRemindDaysBefore())
                     .remindHoursBefore(r.getRemindHoursBefore())
+                    .repeatIntervalMinutes(r.getRepeatIntervalMinutes())
                     .isEnabled(Boolean.TRUE.equals(r.getIsEnabled()))
                     .build());
         }
@@ -253,6 +254,7 @@ public class EventService {
                         .id(r.getId())
                         .remindDaysBefore(r.getRemindDaysBefore())
                         .remindHoursBefore(r.getRemindHoursBefore())
+                        .repeatIntervalMinutes(r.getRepeatIntervalMinutes())
                         .isEnabled(r.getIsEnabled())
                         .build())
                 .collect(Collectors.toList());

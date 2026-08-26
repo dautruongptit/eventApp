@@ -26,6 +26,12 @@ public class Notification {
     @JoinColumn(name = "event_id")
     private Event event;
 
+    /** Reminder đã tạo ra thông báo này — dùng để ReminderScheduler biết
+     * thông báo lần bắn gần nhất của 1 reminder lặp lại đã được đọc chưa. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reminder_id")
+    private EventReminder reminder;
+
     @Column(name = "title", nullable = false, length = 200)
     private String title;
 

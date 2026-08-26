@@ -1,5 +1,6 @@
 package com.demo.event.service;
 
+import com.demo.event.exception.BadRequestException;
 import com.demo.event.exception.ForbiddenException;
 import com.demo.event.exception.ResourceNotFoundException;
 import com.demo.event.model.dto.request.CreateEventRequest;
@@ -86,6 +87,9 @@ public class EventService {
                             new ResourceNotFoundException("Nguoi than khong ton tai"));
         }
 
+        Event.RecurrenceType recurrenceType = resolveRecurrenceType(req.getRecurrenceType());
+        validateRecurrenceFields(recurrenceType, req);
+
         Event event = Event.builder()
                 .user(user)
                 .relative(relative)
@@ -94,8 +98,12 @@ public class EventService {
                 .eventDate(req.getEventDate())
                 .eventTime(req.getEventTime())
                 .isRecurring(Boolean.TRUE.equals(req.getIsRecurring()))
-                .recurrenceType(req.getRecurrenceType() != null
-                        ? Event.RecurrenceType.valueOf(req.getRecurrenceType()) : null)
+                .recurrenceType(recurrenceType)
+                .lunarDay(recurrenceType == Event.RecurrenceType.LUNAR_YEARLY ? req.getLunarDay() : null)
+                .lunarMonth(recurrenceType == Event.RecurrenceType.LUNAR_YEARLY ? req.getLunarMonth() : null)
+                .customIntervalValue(recurrenceType == Event.RecurrenceType.CUSTOM ? req.getCustomIntervalValue() : null)
+                .customIntervalUnit(recurrenceType == Event.RecurrenceType.CUSTOM
+                        ? Event.CustomIntervalUnit.valueOf(req.getCustomIntervalUnit()) : null)
                 .notes(req.getNotes())
                 .isActive(true)
                 .build();
@@ -136,14 +144,21 @@ public class EventService {
                             new ResourceNotFoundException("Nguoi than khong ton tai"));
         }
 
+        Event.RecurrenceType recurrenceType = resolveRecurrenceType(req.getRecurrenceType());
+        validateRecurrenceFields(recurrenceType, req);
+
         event.setRelative(newRelative);
         event.setTitle(req.getTitle());
         event.setCategory(category);
         event.setEventDate(req.getEventDate());
         event.setEventTime(req.getEventTime());
         event.setIsRecurring(Boolean.TRUE.equals(req.getIsRecurring()));
-        event.setRecurrenceType(req.getRecurrenceType() != null
-                ? Event.RecurrenceType.valueOf(req.getRecurrenceType()) : null);
+        event.setRecurrenceType(recurrenceType);
+        event.setLunarDay(recurrenceType == Event.RecurrenceType.LUNAR_YEARLY ? req.getLunarDay() : null);
+        event.setLunarMonth(recurrenceType == Event.RecurrenceType.LUNAR_YEARLY ? req.getLunarMonth() : null);
+        event.setCustomIntervalValue(recurrenceType == Event.RecurrenceType.CUSTOM ? req.getCustomIntervalValue() : null);
+        event.setCustomIntervalUnit(recurrenceType == Event.RecurrenceType.CUSTOM
+                ? Event.CustomIntervalUnit.valueOf(req.getCustomIntervalUnit()) : null);
         event.setNotes(req.getNotes());
 
         // Xoá reminders cũ, tạo lại từ request
@@ -170,6 +185,36 @@ public class EventService {
     }
 
     // ── PRIVATE HELPERS ─────────────────────────────────────────────────
+
+    /** Parse recurrenceType string -> enum, báo lỗi rõ ràng cho client thay vì 500. */
+    private Event.RecurrenceType resolveRecurrenceType(String raw) {
+        if (raw == null) return null;
+        try {
+            return Event.RecurrenceType.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Kieu lap lai khong hop le: " + raw);
+        }
+    }
+
+    /** Kiểm tra các field bắt buộc đi kèm theo từng loại recurrenceType. */
+    private void validateRecurrenceFields(Event.RecurrenceType recurrenceType, CreateEventRequest req) {
+        if (recurrenceType != Event.RecurrenceType.CUSTOM) return;
+
+        if (req.getCustomIntervalValue() == null || req.getCustomIntervalValue() < 1) {
+            throw new BadRequestException(
+                "Vui long chon so lan lap lai (customIntervalValue >= 1) cho kieu lap tuy chinh");
+        }
+        if (req.getCustomIntervalUnit() == null) {
+            throw new BadRequestException(
+                "Vui long chon don vi lap lai (customIntervalUnit) cho kieu lap tuy chinh");
+        }
+        try {
+            Event.CustomIntervalUnit.valueOf(req.getCustomIntervalUnit());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Don vi lap lai tuy chinh khong hop le: " + req.getCustomIntervalUnit());
+        }
+    }
+
     private Event findByIdAndOwner(Long id, Long userId) {
         Event e = eventRepo.findById(id)
                 .orElseThrow(() ->
@@ -224,6 +269,11 @@ public class EventService {
                 .isRecurring(e.getIsRecurring())
                 .recurrenceType(e.getRecurrenceType() != null
                         ? e.getRecurrenceType().name() : null)
+                .lunarDay(e.getLunarDay())
+                .lunarMonth(e.getLunarMonth())
+                .customIntervalValue(e.getCustomIntervalValue())
+                .customIntervalUnit(e.getCustomIntervalUnit() != null
+                        ? e.getCustomIntervalUnit().name() : null)
                 .notes(e.getNotes())
                 .relativeId(e.getRelative() != null ? e.getRelative().getId() : null)
                 .relativeName(e.getRelative() != null ? e.getRelative().getName() : null)

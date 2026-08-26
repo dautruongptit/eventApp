@@ -34,6 +34,11 @@ public class EventReminder {
     @Builder.Default
     private Boolean isEnabled = true;
 
+    /** Thời điểm lần gần nhất đã gửi nhắc nhở cho lần trigger hiện tại — dùng
+     * để ReminderScheduler tránh gửi trùng khi quét lại (NULL = chưa từng gửi). */
+    @Column(name = "notified_at")
+    private LocalDateTime notifiedAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

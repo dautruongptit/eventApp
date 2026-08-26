@@ -72,6 +72,9 @@ public class GoogleAuthService {
             }
             user = createGoogleUser(googleId, email, fullName, avatarUrl);
             log.info("[GoogleAuth] Tao user moi tu Google: userId={} email={}", user.getId(), email);
+        } else if (avatarUrl != null && !avatarUrl.equals(user.getAvatarUrl())) {
+            // Anh dai dien Google co the doi theo thoi gian -> dong bo lai moi lan login
+            user.setAvatarUrl(avatarUrl);
         }
 
         if (!user.canLogin()) {

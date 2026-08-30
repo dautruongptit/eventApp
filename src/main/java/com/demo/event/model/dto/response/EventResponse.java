@@ -18,6 +18,10 @@ public class EventResponse {
     private java.time.LocalTime eventTime;
     private Boolean isRecurring;
     private String recurrenceType;
+    private Integer lunarDay;
+    private Integer lunarMonth;
+    private Integer customIntervalValue;
+    private String customIntervalUnit;
     private String notes;
     // Thông tin người thân (null nếu là sự kiện bản thân)
     private Long relativeId;

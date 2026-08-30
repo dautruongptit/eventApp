@@ -60,6 +60,14 @@ public class Event {
     @Column(name = "lunar_month")
     private Integer lunarMonth;
 
+    /** Chỉ có giá trị khi recurrenceType = CUSTOM — VD: mỗi 3 tuần */
+    @Column(name = "custom_interval_value")
+    private Integer customIntervalValue;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "custom_interval_unit", length = 10)
+    private CustomIntervalUnit customIntervalUnit;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
@@ -97,6 +105,13 @@ public class Event {
         YEARLY,         // lặp theo Dương lịch (VD: sinh nhật tính theo dương)
         MONTHLY,
         WEEKLY,
-        LUNAR_YEARLY    // lặp theo Âm lịch (ngày giỗ) — dùng lunarDay/lunarMonth
+        LUNAR_YEARLY,   // lặp theo Âm lịch (ngày giỗ) — dùng lunarDay/lunarMonth
+        DAILY,          // lặp mỗi ngày
+        HOURLY,         // lặp mỗi giờ
+        CUSTOM          // lặp theo chu kỳ tuỳ chỉnh — dùng customIntervalValue/customIntervalUnit
+    }
+
+    public enum CustomIntervalUnit {
+        HOUR, DAY, WEEK, MONTH, YEAR
     }
 }

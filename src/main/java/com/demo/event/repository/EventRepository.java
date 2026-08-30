@@ -58,17 +58,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query("SELECT e FROM Event e WHERE e.id = :id AND e.user.id = :userId")
     Optional<Event> findByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 
-    // ── Scheduler — sự kiện cần nhắc hôm nay (SEC-10, join reminders) ──────
-
-    @Query("SELECT DISTINCT e FROM Event e JOIN e.reminders r"
-         + " WHERE e.isActive = true"
-         + " AND r.isEnabled = true"
-         + " AND ("
-         + "   (r.remindDaysBefore IS NOT NULL AND DATEDIFF(e.eventDate, :today) = r.remindDaysBefore)"
-         + "   OR (r.remindHoursBefore IS NOT NULL AND e.eventDate = :today)"
-         + " )")
-    List<Event> findEventsNeedingReminderToday(@Param("today") LocalDate today);
-
     // ── Sự kiện lặp lại theo Âm lịch (SEC: LUNAR_YEARLY) ────────────────────
 
     List<Event> findByRecurrenceTypeAndIsActiveTrue(Event.RecurrenceType recurrenceType);

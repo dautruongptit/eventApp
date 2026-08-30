@@ -31,8 +31,16 @@ public class CreateEventRequest {
 
     private Boolean isRecurring;
 
-    /** YEARLY, MONTHLY, WEEKLY, LUNAR_YEARLY — bắt buộc nếu isRecurring=true */
+    /** YEARLY, MONTHLY, WEEKLY, LUNAR_YEARLY, DAILY, HOURLY, CUSTOM — bắt buộc nếu isRecurring=true */
     private String recurrenceType;
+
+    /** Chỉ dùng khi recurrenceType = LUNAR_YEARLY */
+    private Integer lunarDay;
+    private Integer lunarMonth;
+
+    /** Chỉ dùng khi recurrenceType = CUSTOM — VD: value=3, unit=WEEK -> mỗi 3 tuần */
+    private Integer customIntervalValue;
+    private String customIntervalUnit;
 
     private String notes;
 

@@ -11,6 +11,7 @@ import com.demo.event.model.entity.*;
 import com.demo.event.repository.EventCategoryRepository;
 import com.demo.event.repository.EventParticipantRepository;
 import com.demo.event.repository.EventRepository;
+import com.demo.event.repository.NotificationRepository;
 import com.demo.event.repository.RelativeRepository;
 import com.demo.event.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class EventService {
     private final UserRepository userRepo;
     private final EventParticipantRepository participantRepo;
     private final EventCategoryRepository categoryRepo;
+    private final NotificationRepository notificationRepo;
 
     // ── GET UPCOMING (màn hình Home – tối đa limit sự kiện) ─────────────
     public List<EventResponse> getUpcoming(Long userId, int limit) {
@@ -161,8 +163,19 @@ public class EventService {
                 ? Event.CustomIntervalUnit.valueOf(req.getCustomIntervalUnit()) : null);
         event.setNotes(req.getNotes());
 
-        // Xoá reminders cũ, tạo lại từ request
+        // Xoá reminders cũ, tạo lại từ request. Nếu một reminder cũ đã có
+        // thông báo bắn ra (notifications.reminder_id trỏ vào nó), gỡ liên
+        // kết đó trước — orphanRemoval sẽ DELETE reminder cũ khi flush, và
+        // MySQL sẽ chặn DELETE đó vì khoá ngoại nếu còn notification tham
+        // chiếu (SQL error 1451).
         if (req.getReminders() != null) {
+            List<Long> oldReminderIds = event.getReminders().stream()
+                    .map(EventReminder::getId)
+                    .filter(reminderId -> reminderId != null)
+                    .collect(Collectors.toList());
+            if (!oldReminderIds.isEmpty()) {
+                notificationRepo.detachReminders(oldReminderIds);
+            }
             event.getReminders().clear();
             event.getReminders().addAll(buildReminders(req.getReminders(), event));
         }

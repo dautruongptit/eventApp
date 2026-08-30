@@ -5,10 +5,12 @@ import com.demo.event.model.dto.request.CreateEventRequest;
 import com.demo.event.model.dto.response.EventResponse;
 import com.demo.event.model.entity.Event;
 import com.demo.event.model.entity.EventCategory;
+import com.demo.event.model.entity.EventReminder;
 import com.demo.event.model.entity.User;
 import com.demo.event.repository.EventCategoryRepository;
 import com.demo.event.repository.EventParticipantRepository;
 import com.demo.event.repository.EventRepository;
+import com.demo.event.repository.NotificationRepository;
 import com.demo.event.repository.RelativeRepository;
 import com.demo.event.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,6 +36,7 @@ class EventServiceTest {
     @Mock private UserRepository userRepo;
     @Mock private EventParticipantRepository participantRepo;
     @Mock private EventCategoryRepository categoryRepo;
+    @Mock private NotificationRepository notificationRepo;
 
     @InjectMocks
     private EventService service;
@@ -121,5 +125,61 @@ class EventServiceTest {
         assertEquals("LUNAR_YEARLY", res.getRecurrenceType());
         assertEquals(20, res.getLunarDay());
         assertEquals(7, res.getLunarMonth());
+    }
+
+    @Test
+    void update_replacingReminders_detachesNotificationsFromOldRemindersFirst() {
+        // Sự kiện đã tồn tại, có 1 reminder cũ (id=100) — mô phỏng đúng
+        // trạng thái gây lỗi thật: orphanRemoval sẽ DELETE reminder này khi
+        // event.getReminders().clear() chạy, và nếu một Notification còn
+        // trỏ reminder_id=100 thì DB sẽ chặn (FK, SQL error 1451).
+        User owner = User.builder().id(1L).build();
+        EventReminder oldReminder = EventReminder.builder().id(100L).remindDaysBefore(7).build();
+        Event existing = Event.builder()
+                .id(10L)
+                .user(owner)
+                .reminders(new ArrayList<>(List.of(oldReminder)))
+                .build();
+        oldReminder.setEvent(existing);
+        when(eventRepo.findById(10L)).thenReturn(java.util.Optional.of(existing));
+
+        var newReminder = new com.demo.event.model.dto.request.ReminderRequest();
+        newReminder.setRemindDaysBefore(3);
+        newReminder.setIsEnabled(true);
+        CreateEventRequest req = baseRequest(null);
+        req.setReminders(List.of(newReminder));
+
+        service.update(10L, 1L, req);
+
+        // Đã gỡ liên kết reminder_id=100 khỏi mọi notification TRƯỚC KHI
+        // reminders cũ bị xoá — thứ tự này là điều khiến DELETE không còn
+        // vi phạm khoá ngoại.
+        verify(notificationRepo).detachReminders(List.of(100L));
+        assertEquals(1, existing.getReminders().size());
+        assertEquals(3, existing.getReminders().get(0).getRemindDaysBefore());
+    }
+
+    @Test
+    void update_replacingReminders_whenOldReminderHasNoId_doesNotCallDetach() {
+        // Reminder cũ chưa từng persist (id null, VD giữa lúc build entity) —
+        // không có gì để gỡ liên kết, không nên gọi detachReminders với danh
+        // sách rỗng (JPQL "IN ()" sẽ lỗi cú pháp).
+        User owner = User.builder().id(1L).build();
+        EventReminder oldReminder = EventReminder.builder().remindDaysBefore(7).build();
+        Event existing = Event.builder()
+                .id(11L)
+                .user(owner)
+                .reminders(new ArrayList<>(List.of(oldReminder)))
+                .build();
+        when(eventRepo.findById(11L)).thenReturn(java.util.Optional.of(existing));
+
+        var newReminder = new com.demo.event.model.dto.request.ReminderRequest();
+        newReminder.setRemindDaysBefore(1);
+        CreateEventRequest req = baseRequest(null);
+        req.setReminders(List.of(newReminder));
+
+        service.update(11L, 1L, req);
+
+        verify(notificationRepo, never()).detachReminders(any());
     }
 }

@@ -1,10 +1,14 @@
 package com.demo.event.filter;
 
+import com.demo.event.model.entity.RequestLog;
+import com.demo.event.service.RequestLogService;
 import com.demo.event.util.DeviceParser;
+import com.demo.event.util.SensitiveDataMasker;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
@@ -17,12 +21,16 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 /**
  * Log chi tiet moi HTTP request/response: method, URI, IP, status, thoi gian
- * xu ly, va body (o muc DEBUG, da mask field nhay cam).
+ * xu ly, va body (o muc DEBUG, da mask field nhay cam) — ghi ra file log.
+ *
+ * Dong thoi luu lai request/response dang JSON kem nguoi tao request vao DB
+ * (bang request_logs, qua RequestLogService) de phuc vu audit — tru cac path
+ * ha tang (health-check, swagger) bi goi lien tuc.
  *
  * Chay TRUOC ca Spring Security filter chain (order = HIGHEST_PRECEDENCE) de
  * requestId trong MDC bao trum toan bo log cua 1 request, ke ca log phat sinh
@@ -31,14 +39,13 @@ import java.util.regex.Pattern;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@RequiredArgsConstructor
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final String MDC_REQUEST_ID = "requestId";
     private static final int MAX_BODY_LOG_LENGTH = 2000;
 
-    // Cac field nhay cam khong duoc in ra log — mask gia tri trong JSON body
-    private static final Pattern SENSITIVE_FIELD_PATTERN = Pattern.compile(
-        "(?i)\"(password|newPassword|oldPassword|token|accessToken|refreshToken|idToken|secret)\"\\s*:\\s*\"[^\"]*\"");
+    private final RequestLogService requestLogService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -65,20 +72,48 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(wrappedRequest != null ? wrappedRequest : request, wrappedResponse);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
+            String uri = buildUri(request);
 
-            if (wrappedRequest != null && log.isDebugEnabled()) {
-                String body = maskSensitive(getContentAsString(wrappedRequest.getContentAsByteArray()));
-                if (StringUtils.hasText(body)) {
-                    log.debug("[Request] body {} {}: {}", request.getMethod(), buildUri(request), body);
-                }
+            String requestBody = wrappedRequest != null
+                ? getContentAsString(wrappedRequest.getContentAsByteArray()) : null;
+            String responseBody = getContentAsString(wrappedResponse.getContentAsByteArray());
+
+            if (StringUtils.hasText(requestBody) && log.isDebugEnabled()) {
+                log.debug("[Request] body {} {}: {}",
+                    request.getMethod(), uri, SensitiveDataMasker.mask(truncateForLog(requestBody)));
             }
 
             log.info("[Request] <-- {} {} status={} duration={}ms",
-                request.getMethod(), buildUri(request), wrappedResponse.getStatus(), duration);
+                request.getMethod(), uri, wrappedResponse.getStatus(), duration);
+
+            if (!requestLogService.shouldSkip(request.getRequestURI())) {
+                saveAuditLog(request, wrappedResponse, requestId, uri, requestBody, responseBody, duration);
+            }
 
             wrappedResponse.copyBodyToResponse();
             MDC.remove(MDC_REQUEST_ID);
         }
+    }
+
+    private void saveAuditLog(HttpServletRequest request, ContentCachingResponseWrapper wrappedResponse,
+                               String requestId, String uri, String requestBody, String responseBody,
+                               long duration) {
+        Object authUserId = request.getAttribute("authUserId");
+
+        RequestLog requestLog = RequestLog.builder()
+            .requestId(requestId)
+            .httpMethod(request.getMethod())
+            .uri(uri)
+            .userId(authUserId instanceof Long ? (Long) authUserId : null)
+            .requestBody(requestLogService.maskAndTruncate(requestBody))
+            .responseBody(requestLogService.maskAndTruncate(responseBody))
+            .statusCode(wrappedResponse.getStatus())
+            .ipAddress(DeviceParser.getClientIp(request))
+            .durationMs(duration)
+            .createdAt(LocalDateTime.now())
+            .build();
+
+        requestLogService.save(requestLog);
     }
 
     private String buildUri(HttpServletRequest request) {
@@ -88,13 +123,11 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private String getContentAsString(byte[] content) {
         if (content == null || content.length == 0) return "";
-        String body = new String(content, StandardCharsets.UTF_8);
-        return body.length() > MAX_BODY_LOG_LENGTH
-            ? body.substring(0, MAX_BODY_LOG_LENGTH) + "...(truncated)" : body;
+        return new String(content, StandardCharsets.UTF_8);
     }
 
-    private String maskSensitive(String body) {
-        if (!StringUtils.hasText(body)) return body;
-        return SENSITIVE_FIELD_PATTERN.matcher(body).replaceAll("\"$1\":\"***\"");
+    private String truncateForLog(String body) {
+        return body.length() > MAX_BODY_LOG_LENGTH
+            ? body.substring(0, MAX_BODY_LOG_LENGTH) + "...(truncated)" : body;
     }
 }

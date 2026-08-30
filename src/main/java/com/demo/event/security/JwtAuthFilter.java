@@ -58,6 +58,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                // Luu vao request attribute (khong bi Spring Security clear khi
+                // SecurityContext bi xoa cuoi request) de RequestLoggingFilter -
+                // filter nam TRUOC ca chain security - doc lai duoc userId sau khi
+                // filterChain.doFilter() da chay xong.
+                request.setAttribute("authUserId", userId);
+
                 log.debug("[JwtAuthFilter] Xac thuc thanh cong: userId={} roles={} uri={}",
                     userId, roles, request.getRequestURI());
             } else {

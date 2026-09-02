@@ -120,7 +120,7 @@ public class FcmService {
             .setToken(fcmToken)
             .setNotification(Notification.builder()
                 .setTitle("Kết nối thành công")
-                .setBody("Thiết bị của bạn đã sẵn sàng nhận thông báo từ Nhắc Sự Kiện")
+                .setBody("Thiết bị của bạn đã sẵn sàng nhận thông báo từ Nino")
                 .build())
             .build();
 

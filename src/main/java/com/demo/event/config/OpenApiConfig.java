@@ -25,10 +25,10 @@ public class OpenApiConfig {
     private static final String SECURITY_SCHEME = "bearerAuth";
 
     @Bean
-    public OpenAPI nhacSuKienOpenAPI() {
+    public OpenAPI ninoOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Nhac Su Kien API")
+                        .title("Nino API")
                         .description("Backend API cho ung dung quan ly su kien va nhac nho")
                         .version("v2.3.0")
                         .contact(new Contact()

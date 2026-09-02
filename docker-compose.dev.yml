@@ -5,7 +5,7 @@ services:
         dockerfile: Dockerfile
     ports:
       - "8086:8086"
-    container_name: event_app
+    container_name: nino_app
     env_file: .env.dev
     environment:
       SPRING_PROFILES_ACTIVE: dev

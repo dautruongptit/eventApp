@@ -1,5 +1,5 @@
 # ============================================================
-# Dockerfile — Nhắc Sự Kiện App
+# Dockerfile — Nino App
 # Java 17 · Spring Boot 3.3
 # Multi-stage: Maven build → JRE Alpine runtime
 # ============================================================

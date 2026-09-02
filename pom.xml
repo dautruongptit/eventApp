@@ -12,8 +12,8 @@
 	<artifactId>event</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
-	<name/>
-	<description/>
+	<name>Nino</name>
+	<description>Nino - Backend API quan ly su kien va nhac nho</description>
 	<url/>
 	<licenses>
 		<license/>

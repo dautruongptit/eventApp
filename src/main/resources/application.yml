@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════
-# application.yml — Nhac Su Kien App v2.0.0
+# application.yml — Nino App v2.0.0
 # Tat ca gia tri doc tu bien moi truong ${VAR:default}
 # Tham khao .env.example de biet cac bien can thiet
 # ════════════════════════════════════════════════════════════════
@@ -17,7 +17,7 @@ server:
 # ── SPRING ──────────────────────────────────────────────────────
 spring:
   application:
-    name: event_app
+    name: nino_app
 
   # ── DATASOURCE / HIKARICP ──────────────────────────────────
   datasource:
@@ -31,7 +31,15 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-      pool-name: NhacSuKienPool
+      # Ping định kỳ các connection đang idle (kể cả nhóm minimum-idle mà
+      # idle-timeout không đụng tới) để phát hiện sớm connection đã bị
+      # phía server/network âm thầm đóng — tránh lỗi "No operations
+      # allowed after connection closed" khi 1 request thật tới dùng phải
+      # connection chết, treo tới connection-timeout rồi mới fail (500).
+      # Quan trọng với DB ở xa qua Tailscale: idle lâu dễ bị middlebox/
+      # MySQL wait_timeout âm thầm cắt kết nối. Phải nhỏ hơn max-lifetime.
+      keepalive-time: ${DB_KEEPALIVE_TIME:120000}
+      pool-name: NinoPool
 
   # ── JPA / HIBERNATE (Ngang hàng với datasource) ───────────
   jpa:
@@ -119,7 +127,7 @@ management:
       show-details: when-authorized             # Chi hien thi khi co JWT
   info:
     app:
-      name: App Su Kien
+      name: Nino
       version: "@project.version@"
 
 # ── LOGGING ─────────────────────────────────────────────────────

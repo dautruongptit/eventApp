@@ -25,7 +25,7 @@ public class RelativeController {
     @Operation(summary = "Danh sách người thân")
     public ResponseEntity<BaseResponse<?>> getAll(
             @AuthenticationPrincipal Long userId,
-            @Parameter(description = "GIA_DINH|VO_CHONG|CON_CAI|BAN_BE")
+            @Parameter(description = "GIA_DINH|VO_CHONG|CON_CAI|BAN_BE|ANH_CHI_EM")
             @RequestParam(required = false) String groupType,
             @RequestParam(required = false) String search) {
         return ResponseEntity.ok(

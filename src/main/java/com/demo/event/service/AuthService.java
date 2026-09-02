@@ -5,6 +5,7 @@ import com.demo.event.exception.ResourceNotFoundException;
 import com.demo.event.exception.UnauthorizedException;
 import com.demo.event.model.dto.request.LoginRequest;
 import com.demo.event.model.dto.request.RegisterRequest;
+import com.demo.event.model.dto.request.UpdateProfileRequest;
 import com.demo.event.model.dto.request.UpdateSettingsRequest;
 import com.demo.event.model.dto.response.AuthResponse;
 import com.demo.event.model.dto.response.LoginHistoryResponse;
@@ -172,7 +173,7 @@ public class AuthService {
 
     @CacheEvict(value = "userProfile", key = "#userId")
     @Transactional
-    public UserProfileResponse updateProfile(Long userId, RegisterRequest req) {
+    public UserProfileResponse updateProfile(Long userId, UpdateProfileRequest req) {
         User user = userRepo.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setFullName(req.getFullName());

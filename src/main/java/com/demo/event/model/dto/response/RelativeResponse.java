@@ -24,6 +24,7 @@ public class RelativeResponse {
     private BigDecimal heightCm;
     private BigDecimal weightKg;
     private List<String> hobbies;
+    private String notes;
     private String avatarUrl;
     private Integer totalEvents;
     private Long daysToBirthday;
@@ -42,6 +43,7 @@ public class RelativeResponse {
             .heightCm(r.getHeightCm())
             .weightKg(r.getWeightKg())
             .hobbies(parseHobbies(r.getHobbies()))
+            .notes(r.getNotes())
             .avatarUrl(r.getAvatarUrl())
             .totalEvents(r.getTotalEvents())
             .daysToBirthday(calcDaysToBirthday(r.getDateOfBirth()))

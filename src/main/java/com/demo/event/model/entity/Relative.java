@@ -54,6 +54,9 @@ public class Relative {
     @Column(name = "hobbies", columnDefinition = "TEXT")
     private String hobbies;
 
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 
@@ -78,8 +81,16 @@ public class Relative {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * GIA_DINH/CON_CAI/BAN_BE là nhóm cũ, giữ lại CHỈ để không vỡ dữ liệu cũ
+     * (KHÔNG còn hiện trong picker "Quan hệ" mới — xem
+     * {@code relative_form_screen.dart}). Danh sách chọn mới (theo ảnh mẫu
+     * "Quan hệ với bạn"): BAN_THAN, ONG, BA, BO, ME, VO_CHONG, ANH_CHI_EM,
+     * CON, NGUOI_YEU, NGUOI_THAN.
+     */
     public enum GroupType {
-        GIA_DINH, VO_CHONG, CON_CAI, BAN_BE
+        GIA_DINH, VO_CHONG, CON_CAI, BAN_BE, ANH_CHI_EM,
+        BAN_THAN, ONG, BA, BO, ME, CON, NGUOI_YEU, NGUOI_THAN
     }
 
     public enum Gender {

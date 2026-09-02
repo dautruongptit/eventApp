@@ -1,6 +1,6 @@
 package com.demo.event.controller;
 
-import com.demo.event.model.dto.request.RegisterRequest;
+import com.demo.event.model.dto.request.UpdateProfileRequest;
 import com.demo.event.model.dto.request.UpdateSettingsRequest;
 import com.demo.event.model.dto.response.BaseResponse;
 import com.demo.event.service.AuthService;
@@ -34,7 +34,7 @@ public class UserController {
     @Operation(summary = "Cập nhật họ tên")
     public ResponseEntity<BaseResponse<?>> updateProfile(
             @AuthenticationPrincipal Long userId,
-            @Valid @RequestBody RegisterRequest req) {
+            @Valid @RequestBody UpdateProfileRequest req) {
         return ResponseEntity.ok(BaseResponse.success(authService.updateProfile(userId, req)));
     }
 

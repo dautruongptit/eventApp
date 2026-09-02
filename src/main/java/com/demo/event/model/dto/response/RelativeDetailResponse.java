@@ -25,6 +25,7 @@ public class RelativeDetailResponse {
     private BigDecimal heightCm;
     private BigDecimal weightKg;
     private List<String> hobbies;
+    private String notes;
     private String avatarUrl;
     private Integer totalEvents;
     private List<RelatedEventSummary> events;
@@ -44,6 +45,7 @@ public class RelativeDetailResponse {
             .heightCm(r.getHeightCm())
             .weightKg(r.getWeightKg())
             .hobbies(RelativeResponse.parseHobbies(r.getHobbies()))
+            .notes(r.getNotes())
             .avatarUrl(r.getAvatarUrl())
             .totalEvents(r.getTotalEvents())
             .events(relatedEvents.stream().map(RelatedEventSummary::from).toList())

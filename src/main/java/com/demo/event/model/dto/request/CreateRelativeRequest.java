@@ -15,7 +15,7 @@ public class CreateRelativeRequest {
     private String nickname;
 
     @NotBlank(message = "groupType khong duoc de trong")
-    private String groupType;   // GIA_DINH, VO_CHONG, CON_CAI, BAN_BE
+    private String groupType;   // GIA_DINH, VO_CHONG, CON_CAI, BAN_BE, ANH_CHI_EM
 
     private String gender;      // MALE, FEMALE, OTHER
 
@@ -26,6 +26,8 @@ public class CreateRelativeRequest {
 
     /** Mảng string, VD: ["đọc sách","nấu ăn"] — Service tự serialize sang JSON string khi lưu DB */
     private java.util.List<String> hobbies;
+
+    private String notes;
 
     private String avatarUrl;
 }

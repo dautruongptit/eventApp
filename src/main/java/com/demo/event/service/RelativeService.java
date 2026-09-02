@@ -89,6 +89,7 @@ public class RelativeService {
             .heightCm(req.getHeightCm())
             .weightKg(req.getWeightKg())
             .hobbies(toHobbiesJson(req.getHobbies()))
+            .notes(req.getNotes())
             .avatarUrl(req.getAvatarUrl())
             .build();
 
@@ -122,6 +123,7 @@ public class RelativeService {
         relative.setHeightCm(req.getHeightCm());
         relative.setWeightKg(req.getWeightKg());
         relative.setHobbies(toHobbiesJson(req.getHobbies()));
+        relative.setNotes(req.getNotes());
         relative.setAvatarUrl(req.getAvatarUrl());
 
         RelativeResponse response = RelativeResponse.from(relativeRepo.save(relative));
@@ -160,11 +162,22 @@ public class RelativeService {
 
     private String toDisplayName(String groupType) {
         return switch (groupType) {
+            // Nhóm cũ — chỉ còn hiển thị cho dữ liệu có sẵn, không còn trong picker mới.
             case "GIA_DINH" -> "Gia đình";
-            case "VO_CHONG" -> "Vợ / Chồng";
+            case "VO_CHONG" -> "Vợ/Chồng";
             case "CON_CAI"  -> "Con cái";
             case "BAN_BE"   -> "Bạn bè";
-            default         -> groupType;
+            // Danh sách quan hệ mới (theo ảnh mẫu "Quan hệ với bạn").
+            case "ANH_CHI_EM"  -> "Anh/Chị/Em";
+            case "BAN_THAN"    -> "Bản thân";
+            case "ONG"         -> "Ông";
+            case "BA"          -> "Bà";
+            case "BO"          -> "Bố";
+            case "ME"          -> "Mẹ";
+            case "CON"         -> "Con Trai/Con Gái";
+            case "NGUOI_YEU"   -> "Người yêu";
+            case "NGUOI_THAN"  -> "Người Thân";
+            default            -> groupType;
         };
     }
 }

@@ -9,6 +9,7 @@ import com.demo.event.model.dto.response.EventResponse;
 import com.demo.event.model.dto.response.ReminderResponse;
 import com.demo.event.model.entity.*;
 import com.demo.event.repository.EventCategoryRepository;
+import com.demo.event.repository.EventCategoryResponse;
 import com.demo.event.repository.EventParticipantRepository;
 import com.demo.event.repository.EventRepository;
 import com.demo.event.repository.NotificationRepository;
@@ -39,6 +40,15 @@ public class EventService {
     private final EventParticipantRepository participantRepo;
     private final EventCategoryRepository categoryRepo;
     private final NotificationRepository notificationRepo;
+
+    // ── GET CATEGORIES (picker "Danh mục" khi Thêm/Sửa sự kiện) ─────────
+    // Chỉ trả danh mục hệ thống (isSystem=true) — danh mục user tự tạo
+    // (is_system=0) dành cho tính năng tương lai, chưa có UI tạo/quản lý.
+    public List<EventCategoryResponse> getCategories() {
+        return categoryRepo.findByIsSystemTrueOrderBySortOrderAsc().stream()
+            .map(EventCategoryResponse::from)
+            .collect(Collectors.toList());
+    }
 
     // ── GET UPCOMING (màn hình Home – tối đa limit sự kiện) ─────────────
     public List<EventResponse> getUpcoming(Long userId, int limit) {

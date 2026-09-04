@@ -32,6 +32,12 @@ public class EventController {
             BaseResponse.success(eventService.getEvents(userId, categoryId, relativeId, month, year)));
     }
 
+    @GetMapping("/categories")
+    @Operation(summary = "Danh sách danh mục sự kiện (id/code/tên/icon/màu)")
+    public ResponseEntity<BaseResponse<?>> getCategories() {
+        return ResponseEntity.ok(BaseResponse.success(eventService.getCategories()));
+    }
+
     @GetMapping("/upcoming")
     @Operation(summary = "Sự kiện sắp tới (90 ngày)")
     public ResponseEntity<BaseResponse<?>> getUpcoming(
